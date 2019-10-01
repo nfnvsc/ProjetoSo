@@ -27,9 +27,9 @@ static void parseArgs (long argc, char* const argv[]){
         displayUsage(argv[0]);
     }
     
-    numberThreads = atoi(argv[3]);
+    numberThreads = atoi(argv[3]); /*number threads*/
 }
-
+/*teste1*/
 int insertCommand(char* data) {
     if(numberCommands != MAX_COMMANDS) {
         strcpy(inputCommands[numberCommands++], data);
