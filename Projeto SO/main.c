@@ -23,17 +23,17 @@ pthread_mutex_t lock;
 
 void thread_lock(){
     #ifdef MUTEX
-    pthread_mutex_lock(&lock);
+    if (pthread_mutex_lock(&lock)) printf("Failed to lock mutex\n");
     #elif RWLOCK
-    pthread_mutex_lock(&lock);
+    if (pthread_mutex_lock(&lock)) printf("Failed to lock mutex\n");
     #endif
 }
 
 void thread_unlock(){
     #ifdef MUTEX
-    pthread_mutex_unlock(&lock);
+    if (pthread_mutex_unlock(&lock)) printf("Failed to unlock mutex\n");
     #elif RWLOCK
-    pthread_mutex_unlock(&lock);
+    if (pthread_mutex_unlock(&lock)) printf("Failed to unlock mutex\n");
     #endif
 }
 
@@ -160,8 +160,10 @@ void *applyCommands(){
 
 void writeFile(char* fileName){
     FILE *outputFile;
+
     outputFile = fopen(fileName ,"w");
     print_tecnicofs_tree(outputFile, fs);
+
     fclose(outputFile);
 }
 
@@ -188,13 +190,13 @@ void init_mutex(){
     #ifdef MUTEX
     if (pthread_mutex_init(&lock, NULL) != 0)
     {
-        printf("\n mutex command init failed\n");
+        printf("Mutex init failed\n");
         exit(1);
     }
     #elif RWLOCK
     if (pthread_mutex_init(&lock, NULL) != 0)
     {
-        printf("\n mutex command init failed\n");
+        printf("Mutex init failed\n");
         exit(1);
     }
     #endif

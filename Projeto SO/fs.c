@@ -38,18 +38,21 @@ void init_lock(tecnicofs* fs){
 
 void thread_fs_lock(tecnicofs* fs, int n){
 	#ifdef MUTEX
-	pthread_mutex_lock(&fs->mutex_lock);
+	if(pthread_mutex_lock(&fs->mutex_lock)) printf("Mutex lock error");;
 	#elif RWLOCK
-	if (n)	pthread_rwlock_wrlock(&fs->rw_lock);
-	else pthread_rwlock_rdlock(&fs->rw_lock);
+	if (n){
+		if(pthread_rwlock_wrlock(&fs->rw_lock)) printf("Mutex lock error"); 
+	}	
+	else 
+		if(pthread_rwlock_rdlock(&fs->rw_lock)) printf("RWLOCK lock error");
 	#endif
 }
 
 void thread_fs_unlock(tecnicofs* fs){
 	#ifdef MUTEX
-	pthread_mutex_unlock(&fs->mutex_lock);
+	if (pthread_mutex_unlock(&fs->mutex_lock)) printf("MUTEX unlock error");
 	#elif RWLOCK
-	pthread_rwlock_unlock(&fs->rw_lock);
+	if (pthread_rwlock_unlock(&fs->rw_lock)) printf("RWLOCK unlock error");
 	#endif
 }
 
