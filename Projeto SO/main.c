@@ -13,7 +13,10 @@
 #define MAX_INPUT_SIZE 100
 
 int numberThreads = 0;
+int numberBuckets = 0;
+
 tecnicofs* fs;
+tecnicofs** hash_table;
 
 char inputCommands[MAX_COMMANDS][MAX_INPUT_SIZE];
 int numberCommands = 0;
@@ -38,17 +41,18 @@ void thread_unlock(){
 }
 
 static void displayUsage (const char* appName){
-    printf("Usage: %s inputfile outputfile numthreads\n", appName);
+    printf("Usage: %s inputfile outputfile numthreads numbuckets\n", appName);
     exit(EXIT_FAILURE);
 }
 
 static void parseArgs (long argc, char* const argv[]){
-    if (argc != 4) {
+    if (argc != 5) {
         fprintf(stderr, "Invalid format:\n");
         displayUsage(argv[0]);
     }
     
     numberThreads = atoi(argv[3]);
+    numberBuckets = atoi(argv[4]);
 }       
 
 int insertCommand(char* data) {
@@ -126,8 +130,8 @@ void *applyCommands(){
             exit(EXIT_FAILURE);
         }
         int iNumber;
-
-        if (token == 'c') iNumber = obtainNewInumber(fs);
+        //printf("%c %s\n", token, name);
+        if (token == 'c') iNumber = obtainNewInumber(fs, name);
 
         thread_unlock();
 
@@ -224,8 +228,8 @@ int main(int argc, char* argv[]) {
     parseArgs(argc, argv);
     
     init_mutex();
-
-    fs = new_tecnicofs();
+    
+    fs = new_tecnicofs(numberBuckets);
 
     processInput(argv[1]);
 

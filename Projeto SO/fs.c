@@ -3,32 +3,48 @@
 #include <stdio.h>
 #include <string.h>
 
-int obtainNewInumber(tecnicofs* fs) {
-	int newInumber = ++(fs->nextINumber);
+
+int obtainNewInumber(tecnicofs* fs, char* name) {
+	tecnicofs_node* fs_node = get_node(fs, name);
+	int newInumber = ++(fs_node->nextINumber);
 	return newInumber;
 }
 
-tecnicofs* new_tecnicofs(){
+tecnicofs* new_tecnicofs(int numberBuckets){
+	int i;
 	tecnicofs* fs = malloc(sizeof(tecnicofs));
-	if (!fs) {
+	fs->fs_nodes = malloc(sizeof(tecnicofs_node*)*numberBuckets);
+	for(i = 0; i < numberBuckets; i++){
+		fs->fs_nodes[i] = new_tecnicofs_node();
+	}
+
+	fs->numberBuckets = numberBuckets;
+
+	return fs;
+
+}
+
+tecnicofs_node* new_tecnicofs_node(){
+	tecnicofs_node* fs_node = malloc(sizeof(tecnicofs_node));
+	if (!fs_node) {
 		perror("failed to allocate tecnicofs");
 		exit(EXIT_FAILURE);
 	}
-	fs->bstRoot = NULL;
-	fs->nextINumber = 0;
-	init_lock(fs);
-	return fs;
+	fs_node->bstRoot = NULL;
+	fs_node->nextINumber = 0;
+	init_lock(fs_node);
+	return fs_node;
 }
 
-void init_lock(tecnicofs* fs){
+void init_lock(tecnicofs_node* fs_node){
 	#ifdef MUTEX
-	if (pthread_mutex_init(&fs->mutex_lock, NULL) != 0)
+	if (pthread_mutex_init(&fs_node->mutex_lock, NULL) != 0)
     {
         printf("\n mutex init failed\n");
         exit(1);
     }
 	#elif RWLOCK
-	if (pthread_rwlock_init(&fs->rw_lock, NULL) != 0)
+	if (pthread_rwlock_init(&fs_node->rw_lock, NULL) != 0)
     {
         printf("\n rwlock init failed\n");
         exit(1);
@@ -36,51 +52,80 @@ void init_lock(tecnicofs* fs){
 	#endif
 }
 
-void thread_fs_lock(tecnicofs* fs, int n){
+void thread_fs_lock(tecnicofs_node* fs_node, int n){
 	#ifdef MUTEX
-	if(pthread_mutex_lock(&fs->mutex_lock)) printf("Mutex lock error");;
+	if(pthread_mutex_lock(&fs_node->mutex_lock)) printf("Mutex lock error");;
 	#elif RWLOCK
 	if (n){
-		if(pthread_rwlock_wrlock(&fs->rw_lock)) printf("Mutex lock error"); 
+		if(pthread_rwlock_wrlock(&fs_node->rw_lock)) printf("RWLOCK lock error"); 
 	}	
 	else 
-		if(pthread_rwlock_rdlock(&fs->rw_lock)) printf("RWLOCK lock error");
+		if(pthread_rwlock_rdlock(&fs_node->rw_lock)) printf("RWLOCK lock error");
 	#endif
 }
 
-void thread_fs_unlock(tecnicofs* fs){
+void thread_fs_unlock(tecnicofs_node* fs_node){
 	#ifdef MUTEX
-	if (pthread_mutex_unlock(&fs->mutex_lock)) printf("MUTEX unlock error");
+	if (pthread_mutex_unlock(&fs_node->mutex_lock)) printf("MUTEX unlock error");
 	#elif RWLOCK
-	if (pthread_rwlock_unlock(&fs->rw_lock)) printf("RWLOCK unlock error");
+	if (pthread_rwlock_unlock(&fs_node->rw_lock)) printf("RWLOCK unlock error");
 	#endif
 }
 
 void free_tecnicofs(tecnicofs* fs){
-	free_tree(fs->bstRoot);
+	int i;
+	tecnicofs_node* fs_node;
+	for(i = 0; i<fs->numberBuckets; i++){
+		fs_node = fs->fs_nodes[i];
+		free_tree(fs_node->bstRoot);
+		free(fs_node);
+	}
+	free(fs->fs_nodes);
 	free(fs);
+	
+}
+
+tecnicofs_node* get_node(tecnicofs* fs, char *name){
+	int hash_number = hash(name, fs->numberBuckets);
+
+	tecnicofs_node* node = fs->fs_nodes[hash_number]; 
+	return node;
+
 }
 
 void create(tecnicofs* fs, char *name, int inumber){
-	thread_fs_lock(fs, 1);
-	fs->bstRoot = insert(fs->bstRoot, name, inumber);
-	thread_fs_unlock(fs);
+	tecnicofs_node* fs_node = get_node(fs, name);
+
+	thread_fs_lock(fs_node, 1);
+	fs_node->bstRoot = insert(fs_node->bstRoot, name, inumber);
+	thread_fs_unlock(fs_node);
 }
 
 void delete(tecnicofs* fs, char *name){
-	thread_fs_lock(fs, 1);
-	fs->bstRoot = remove_item(fs->bstRoot, name);
-	thread_fs_unlock(fs);
+	tecnicofs_node* fs_node = get_node(fs, name);
+
+	thread_fs_lock(fs_node, 1);
+	fs_node->bstRoot = remove_item(fs_node->bstRoot, name);
+	thread_fs_unlock(fs_node);
 }
 
 int lookup(tecnicofs* fs, char *name){
-	thread_fs_lock(fs, 0);
-	node* searchNode = search(fs->bstRoot, name);
-	thread_fs_unlock(fs);
+	tecnicofs_node* fs_node = get_node(fs, name);
+
+	thread_fs_lock(fs_node, 0);
+	node* searchNode = search(fs_node->bstRoot, name);
+	thread_fs_unlock(fs_node);
+
 	if ( searchNode ) return searchNode->inumber;
 	return 0;
 }
 
 void print_tecnicofs_tree(FILE * fp, tecnicofs *fs){
-	print_tree(fp, fs->bstRoot);
+	int i;
+	tecnicofs_node* fs_node;
+	for(i = 0; i < fs->numberBuckets; i++){
+		fs_node = fs->fs_nodes[i];
+		print_tree(fp, fs_node->bstRoot);
+
+	}
 }
