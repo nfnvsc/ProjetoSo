@@ -25,17 +25,13 @@ int headQueue = 0;
 pthread_mutex_t lock;
 
 void thread_lock(){
-    #ifdef MUTEX
-    if (pthread_mutex_lock(&lock)) printf("Failed to lock mutex\n");
-    #elif RWLOCK
+    #if defined (MUTEX) || defined (RWLOCK)
     if (pthread_mutex_lock(&lock)) printf("Failed to lock mutex\n");
     #endif
 }
 
 void thread_unlock(){
-    #ifdef MUTEX
-    if (pthread_mutex_unlock(&lock)) printf("Failed to unlock mutex\n");
-    #elif RWLOCK
+    #if defined (MUTEX) || defined (RWLOCK)
     if (pthread_mutex_unlock(&lock)) printf("Failed to unlock mutex\n");
     #endif
 }
@@ -130,7 +126,7 @@ void *applyCommands(){
             exit(EXIT_FAILURE);
         }
         int iNumber;
-        //printf("%c %s\n", token, name);
+
         if (token == 'c') iNumber = obtainNewInumber(fs, name);
 
         thread_unlock();
@@ -155,6 +151,7 @@ void *applyCommands(){
                 exit(EXIT_FAILURE);
             }
         }
+
 
         
     }
@@ -191,13 +188,7 @@ void excecuteThreads(){
 }
 
 void init_mutex(){
-    #ifdef MUTEX
-    if (pthread_mutex_init(&lock, NULL) != 0)
-    {
-        printf("Mutex init failed\n");
-        exit(1);
-    }
-    #elif RWLOCK
+    #if defined (MUTEX) || defined (RWLOCK)
     if (pthread_mutex_init(&lock, NULL) != 0)
     {
         printf("Mutex init failed\n");
@@ -213,9 +204,7 @@ double get_time(){
 }
 
 void executeCommands(){
-    #ifdef MUTEX
-    excecuteThreads();
-    #elif RWLOCK
+    #if defined (MUTEX) || defined (RWLOCK)
     excecuteThreads();
     #else
     applyCommands();

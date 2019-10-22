@@ -13,6 +13,7 @@ typedef struct tecnicofs_node {
 
 typedef struct tecnicofs {
     tecnicofs_node** fs_nodes;
+    //pthread_rwlock_t rw_lock;
     int numberBuckets;
 } tecnicofs;
 

@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
+pthread_mutex_t lock;
+
 
 int obtainNewInumber(tecnicofs* fs, char* name) {
 	tecnicofs_node* fs_node = get_node(fs, name);
@@ -13,11 +15,15 @@ int obtainNewInumber(tecnicofs* fs, char* name) {
 tecnicofs* new_tecnicofs(int numberBuckets){
 	int i;
 	tecnicofs* fs = malloc(sizeof(tecnicofs));
+	if (!fs) {
+		perror("failed to allocate tecnicofs");
+		exit(EXIT_FAILURE);
+	}
 	fs->fs_nodes = malloc(sizeof(tecnicofs_node*)*numberBuckets);
 	for(i = 0; i < numberBuckets; i++){
 		fs->fs_nodes[i] = new_tecnicofs_node();
 	}
-
+	//pthread_rwlock_init(&fs->rw_lock, NULL);
 	fs->numberBuckets = numberBuckets;
 
 	return fs;
@@ -27,7 +33,7 @@ tecnicofs* new_tecnicofs(int numberBuckets){
 tecnicofs_node* new_tecnicofs_node(){
 	tecnicofs_node* fs_node = malloc(sizeof(tecnicofs_node));
 	if (!fs_node) {
-		perror("failed to allocate tecnicofs");
+		perror("failed to allocate tecnicofs_node");
 		exit(EXIT_FAILURE);
 	}
 	fs_node->bstRoot = NULL;
@@ -87,7 +93,6 @@ void free_tecnicofs(tecnicofs* fs){
 
 tecnicofs_node* get_node(tecnicofs* fs, char *name){
 	int hash_number = hash(name, fs->numberBuckets);
-
 	tecnicofs_node* node = fs->fs_nodes[hash_number]; 
 	return node;
 
