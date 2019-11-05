@@ -6,13 +6,13 @@
 
 typedef struct tecnicofs_node {
     node* bstRoot;
-    int nextINumber;
     pthread_mutex_t mutex_lock;
     pthread_rwlock_t rw_lock;
 } tecnicofs_node;
 
 typedef struct tecnicofs {
     tecnicofs_node** fs_nodes;
+    int nextINumber;
     //pthread_rwlock_t rw_lock;
     int numberBuckets;
 } tecnicofs;
@@ -26,6 +26,7 @@ void free_tecnicofs(tecnicofs* fs);
 void create(tecnicofs* fs, char *name, int inumber);
 void delete(tecnicofs* fs, char *name);
 int lookup(tecnicofs* fs, char *name);
+void rename(tecnicofs* fs, char* name, char* new_name);
 void print_tecnicofs_tree(FILE * fp, tecnicofs *fs);
 void thread_fs_lock(tecnicofs_node* fs_node, int n);
 void thread_fs_unlock(tecnicofs_node* fs_node);

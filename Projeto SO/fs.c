@@ -7,8 +7,7 @@ pthread_mutex_t lock;
 
 
 int obtainNewInumber(tecnicofs* fs, char* name) {
-	tecnicofs_node* fs_node = get_node(fs, name);
-	int newInumber = ++(fs_node->nextINumber);
+	int newInumber = ++(fs->nextINumber);
 	return newInumber;
 }
 
@@ -25,6 +24,7 @@ tecnicofs* new_tecnicofs(int numberBuckets){
 	}
 	//pthread_rwlock_init(&fs->rw_lock, NULL);
 	fs->numberBuckets = numberBuckets;
+	fs->nextINumber = 0;
 
 	return fs;
 
@@ -37,7 +37,6 @@ tecnicofs_node* new_tecnicofs_node(){
 		exit(EXIT_FAILURE);
 	}
 	fs_node->bstRoot = NULL;
-	fs_node->nextINumber = 0;
 	init_lock(fs_node);
 	return fs_node;
 }
@@ -123,6 +122,11 @@ int lookup(tecnicofs* fs, char *name){
 
 	if ( searchNode ) return searchNode->inumber;
 	return 0;
+}
+
+void rename(tecnicofs* fs, char* name, char* new_name){
+
+
 }
 
 void print_tecnicofs_tree(FILE * fp, tecnicofs *fs){
