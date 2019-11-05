@@ -139,12 +139,17 @@ void *applyCommands(){
         
         char token;
         char name[MAX_INPUT_SIZE];
-        int numTokens = sscanf(command, "%c %s", &token, name);
+        char new_name[MAX_INPUT_SIZE];
+        int numTokens = sscanf(command, "%c %s %s", &token, name, new_name);
         
-        if (numTokens != 2) {
+        if (token == 'r' && numTokens != 3) {
+            fprintf(stderr, "Error: invalid command in Queue\n");
+            exit(EXIT_FAILURE);
+        } else if (numTokens != 2){
             fprintf(stderr, "Error: invalid command in Queue\n");
             exit(EXIT_FAILURE);
         }
+        
         int iNumber;
 
         if (token == 'c') iNumber = obtainNewInumber(fs, name);
@@ -165,6 +170,8 @@ void *applyCommands(){
             case 'd':
                 delete(fs, name);
                 break;
+            case 'r':
+                rename(fs, name, new_name);
             case 'e':
                 reachedEndOfFile = 1;
                 break;
