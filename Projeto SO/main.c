@@ -15,7 +15,6 @@
 
 int numberThreads = 0;
 int numberBuckets = 0;
-
 tecnicofs* fs;
     
 char inputCommands[MAX_COMMANDS][MAX_INPUT_SIZE];
@@ -26,18 +25,18 @@ pthread_mutex_t lock_p, lock_c;
 sem_t producer;
 sem_t consumer;
 
-void mutex_lock(pthread_mutex_t lock){
+void mutex_lock(pthread_mutex_t *lock){
     #if defined (MUTEX) || defined (RWLOCK)
-    if (pthread_mutex_lock(&lock)){
+    if (pthread_mutex_lock(lock)){
      printf("Failed to lock mutex\n");
      exit(EXIT_FAILURE);
     }
     #endif
 }
 
-void mutex_unlock(pthread_mutex_t lock){
+void mutex_unlock(pthread_mutex_t *lock){
     #if defined (MUTEX) || defined (RWLOCK)
-    if (pthread_mutex_unlock(&lock)){ 
+    if (pthread_mutex_unlock(lock)){ 
     	printf("Failed to unlock mutex\n");
     	exit(EXIT_FAILURE);
     }
@@ -82,10 +81,9 @@ static void parseArgs (long argc, char* const argv[]){
 
 int insertCommand(char* data) {
 	sem_wait(&producer);
-	mutex_lock(lock_p);
-    strcpy(inputCommands[prodptr], data);
-    prodptr = (prodptr + 1) % MAX_COMMANDS;
-    mutex_unlock(lock_p);
+	mutex_lock(&lock_p);
+    strcpy(inputCommands[(prodptr++) % MAX_COMMANDS], data);
+    mutex_unlock(&lock_p);
     sem_post(&consumer);    
     return 1;
 }
@@ -98,11 +96,13 @@ void errorParse(){
 void *processInput(void *fileName){
     char line[MAX_INPUT_SIZE];
     FILE *inputFile;
-    int i;
-
-    if (!(inputFile = fopen(fileName, "r")))
+	inputFile = fopen(fileName, "r");\
+    if (!inputFile){
         printf("\nFile not found.");
-        
+        exit(EXIT_FAILURE);
+    }
+
+   
     while (fgets(line, sizeof(line)/sizeof(char), inputFile)) {
         char token;
         char name[MAX_INPUT_SIZE];
@@ -113,7 +113,6 @@ void *processInput(void *fileName){
         if (numTokens < 1) {
             continue;
         }
-
         switch (token) {
             case 'c':
             case 'l':
@@ -130,9 +129,7 @@ void *processInput(void *fileName){
             }
         }
     }
-    for (i = 0; i<numberThreads; i++){
-    	insertCommand("e EOF\n");
-    }
+    insertCommand("e EOF\n");
     fclose(inputFile);
     return NULL;
 }
@@ -143,11 +140,13 @@ void *applyCommands(){
         char name[MAX_INPUT_SIZE];
         //char new_name[MAX_INPUT_SIZE];
         int iNumber;
+        //if (reachedEndOfFile) return NULL;
+
         sem_wait(&consumer);
-		mutex_lock(lock_c);
+		mutex_lock(&lock_c);
 		int numTokens = sscanf(inputCommands[(consptr++) % MAX_COMMANDS], "%c %s", &token, name/*, new_name*/);
 		if (token == 'c') iNumber = obtainNewInumber(fs, name);
-		mutex_unlock(lock_c);
+		mutex_unlock(&lock_c);
         sem_post(&producer);
 
 		//REMOVE COMMAND
@@ -156,7 +155,6 @@ void *applyCommands(){
             fprintf(stderr, "Error: invalid command in Queue\n");
             exit(EXIT_FAILURE);
         } else */
-
 
         if (numTokens != 2){
             fprintf(stderr, "Error: invalid command in Queue\n");
@@ -183,6 +181,7 @@ void *applyCommands(){
                 rename(fs, name, new_name);
                 */
             case 'e': {
+            	insertCommand("e EOF\n");
             	return NULL;
             }
             default: { /* error */
@@ -212,7 +211,6 @@ void excecuteThreads(void *input){
     pthread_t *tid = malloc(numberThreads * sizeof(pthread_t));
     #endif
 
-
     if (pthread_create(&inputThread, NULL, processInput, input) != 0){
         printf("Failed to create thread\n");
         exit(EXIT_FAILURE);
@@ -226,7 +224,6 @@ void excecuteThreads(void *input){
         }        
     }
     #else
-
     applyCommands();
     #endif
 
