@@ -22,19 +22,25 @@ char inputCommands[MAX_COMMANDS][MAX_INPUT_SIZE];
 int prodptr = 0;
 int consptr = 0;
 
-pthread_mutex_t lock_p, lock_c, lock_iNumber;
+pthread_mutex_t lock_p, lock_c;
 sem_t producer;
 sem_t consumer;
 
 void mutex_lock(pthread_mutex_t lock){
     #if defined (MUTEX) || defined (RWLOCK)
-    if (pthread_mutex_lock(&lock)) printf("Failed to lock mutex\n");
+    if (pthread_mutex_lock(&lock)){
+     printf("Failed to lock mutex\n");
+     exit(EXIT_FAILURE);
+    }
     #endif
 }
 
 void mutex_unlock(pthread_mutex_t lock){
     #if defined (MUTEX) || defined (RWLOCK)
-    if (pthread_mutex_unlock(&lock)) printf("Failed to unlock mutex\n");
+    if (pthread_mutex_unlock(&lock)){ 
+    	printf("Failed to unlock mutex\n");
+    	exit(EXIT_FAILURE);
+    }
     #endif
 }
 
@@ -140,13 +146,18 @@ void *applyCommands(){
         sem_wait(&consumer);
 		mutex_lock(lock_c);
 		int numTokens = sscanf(inputCommands[(consptr++) % MAX_COMMANDS], "%c %s", &token, name/*, new_name*/);
-		sem_post(&producer);
+		if (token == 'c') iNumber = obtainNewInumber(fs, name);
+		mutex_unlock(lock_c);
+        sem_post(&producer);
+
 		//REMOVE COMMAND
         //char new_name[MAX_INPUT_SIZE];
        /*if (token == 'r' && numTokens != 3) {
             fprintf(stderr, "Error: invalid command in Queue\n");
             exit(EXIT_FAILURE);
         } else */
+
+
         if (numTokens != 2){
             fprintf(stderr, "Error: invalid command in Queue\n");
             exit(EXIT_FAILURE);
@@ -155,12 +166,9 @@ void *applyCommands(){
         int searchResult;        
         switch (token)   {
             case 'c':
-            	iNumber = obtainNewInumber(fs, name);
-            	mutex_unlock(lock_c);
                 create(fs, name, iNumber);
                 break;
             case 'l':
-            	mutex_unlock(lock_c);
                 searchResult = lookup(fs, name);
                 if(!searchResult)
                     printf("%s not found\n", name);
@@ -168,7 +176,6 @@ void *applyCommands(){
                     printf("%s found with inumber %d\n", name, searchResult);
                 break;
             case 'd':
-            	mutex_unlock(lock_c);
                 delete(fs, name);
                 break;
                /*
@@ -176,11 +183,9 @@ void *applyCommands(){
                 rename(fs, name, new_name);
                 */
             case 'e': {
-            	mutex_unlock(lock_c);
             	return NULL;
             }
             default: { /* error */
-            	mutex_unlock(lock_c);
                 fprintf(stderr, "Error: command to apply\n");
                 exit(EXIT_FAILURE);
             }    
@@ -202,52 +207,58 @@ void writeFile(char* fileName){
 }
 
 void excecuteThreads(void *input){
-    int i;
-    pthread_t *tid = malloc(numberThreads * sizeof(pthread_t));
     pthread_t inputThread;
+    #if defined (MUTEX) || defined (RWLOCK)
+    pthread_t *tid = malloc(numberThreads * sizeof(pthread_t));
+    #endif
+
 
     if (pthread_create(&inputThread, NULL, processInput, input) != 0){
         printf("Failed to create thread\n");
         exit(EXIT_FAILURE);
     }
-    for (i=0; i < numberThreads; i++){
+
+   	#if defined (MUTEX) || defined (RWLOCK)
+    for (int i=0; i < numberThreads; i++){
         if (pthread_create(&tid[i], NULL, applyCommands, NULL) != 0){
             printf("Failed to create thread\n");
             exit(EXIT_FAILURE);
         }        
     }
-    
+    #else
+
+    applyCommands();
+    #endif
+
     if (pthread_join(inputThread, NULL) != 0){
         printf("Failed to join thread\n");
         exit(EXIT_FAILURE);
     }
-    for (i=0; i<numberThreads; i++){
+
+    #if defined (MUTEX) || defined (RWLOCK)
+    for (int i=0; i<numberThreads; i++){
         if (pthread_join(tid[i], NULL) != 0){
             printf("Failed to join thread\n");
             exit(EXIT_FAILURE);
         }
     }
     free(tid);
+    #endif
 }
 
 void init_mutex_sem(){
     #if defined (MUTEX) || defined (RWLOCK)
-    if (pthread_mutex_init(&lock_p, NULL) != 0)
-    {
-        printf("Mutex init failed\n");
-        exit(EXIT_FAILURE);
-    }
     if (pthread_mutex_init(&lock_c, NULL) != 0)
     {
         printf("Mutex init failed\n");
         exit(EXIT_FAILURE);
     }
-    if (pthread_mutex_init(&lock_iNumber, NULL) != 0)
-    {
+    #endif
+    if (pthread_mutex_init(&lock_p, NULL) != 0){
         printf("Mutex init failed\n");
         exit(EXIT_FAILURE);
     }
-    #endif
+
     if (sem_init(&producer, 0, MAX_COMMANDS) != 0){
         printf("Failed to create semaphore\n");
         exit(EXIT_FAILURE);
@@ -265,15 +276,6 @@ double get_time(){
     return tv.tv_usec;
 }
 
-void executeCommands(void *input){
-    #if defined (MUTEX) || defined (RWLOCK)
-    excecuteThreads(input);
-    #else
-    //FALTA NOSYNC
-    applyCommands();
-    #endif        
-}
-
 int main(int argc, char* argv[]) {
     double begin, time_spent; 
     parseArgs(argc, argv);
@@ -281,7 +283,7 @@ int main(int argc, char* argv[]) {
     fs = new_tecnicofs(numberBuckets);
 
     begin = get_time(); /*start clock*/
-    executeCommands(argv[1]);
+    excecuteThreads(argv[1]);
     time_spent = (get_time() - begin)/1000000.0; /*finish clock*/
     printf("TecnicoFS completed in %0.4f seconds.\n", time_spent);
 
