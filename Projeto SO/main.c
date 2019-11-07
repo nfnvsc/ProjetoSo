@@ -19,34 +19,44 @@ int numberBuckets = 0;
 tecnicofs* fs;
     
 char inputCommands[MAX_COMMANDS][MAX_INPUT_SIZE];
-int numberCommands = 0;
-int headQueue = 0;
-int reachedEndOfFile = 0;
+int prodptr = 0;
+int consptr = 0;
 
-pthread_mutex_t lock;
-sem_t productor;
+pthread_mutex_t lock_p, lock_c, lock_iNumber;
+sem_t producer;
 sem_t consumer;
 
-void mutex_lock(){
+void mutex_lock(pthread_mutex_t lock){
     #if defined (MUTEX) || defined (RWLOCK)
     if (pthread_mutex_lock(&lock)) printf("Failed to lock mutex\n");
     #endif
 }
 
-void mutex_unlock(){
+void mutex_unlock(pthread_mutex_t lock){
     #if defined (MUTEX) || defined (RWLOCK)
     if (pthread_mutex_unlock(&lock)) printf("Failed to unlock mutex\n");
     #endif
 }
 
-void mutex_destroy(){
+void mutex_destroy_sem(){
     #if defined (RWLOCK) || defined (MUTEX)
-        int ret = pthread_mutex_destroy(&lock);
-        if(ret != 0){
+        if (pthread_mutex_destroy(&lock_c) != 0){
             perror("mutex_destroy failed\n");
             exit(EXIT_FAILURE);
         }
+        if (pthread_mutex_destroy(&lock_p) != 0){
+        	perror("mutex_destroy failed\n");
+        	exit(EXIT_FAILURE);
+        }
     #endif
+    if (sem_destroy(&producer) != 0){
+    	perror("mutex destroy failed\n");
+    	exit(EXIT_FAILURE);
+    }
+    if (sem_destroy(&consumer) != 0){
+    	perror("mutex destroy failed\n");
+    	exit(EXIT_FAILURE);
+    }
 }
 
 static void displayUsage (const char* appName){
@@ -65,19 +75,13 @@ static void parseArgs (long argc, char* const argv[]){
 }       
 
 int insertCommand(char* data) {
-    if(numberCommands != MAX_COMMANDS) {
-        strcpy(inputCommands[numberCommands++], data);
-        return 1;
-    }
-    return 0;
-}
-
-char* removeCommand() {
-    if((numberCommands > 0)){
-        numberCommands--;
-        return inputCommands[headQueue++];  
-    }
-    return NULL;
+	sem_wait(&producer);
+	mutex_lock(lock_p);
+    strcpy(inputCommands[prodptr], data);
+    prodptr = (prodptr + 1) % MAX_COMMANDS;
+    mutex_unlock(lock_p);
+    sem_post(&consumer);    
+    return 1;
 }
 
 void errorParse(){
@@ -85,9 +89,10 @@ void errorParse(){
     exit(EXIT_FAILURE);
 }
 
-void processInput(char* fileName){
+void *processInput(void *fileName){
     char line[MAX_INPUT_SIZE];
     FILE *inputFile;
+    int i;
 
     if (!(inputFile = fopen(fileName, "r")))
         printf("\nFile not found.");
@@ -100,12 +105,9 @@ void processInput(char* fileName){
 
         /* perform minimal validation */
         if (numTokens < 1) {
-            insertCommand("e reachedEndOfFile");
             continue;
         }
 
-        sem_wait(&productor);
-        mutex_lock();
         switch (token) {
             case 'c':
             case 'l':
@@ -114,53 +116,51 @@ void processInput(char* fileName){
                     errorParse();
                 if(insertCommand(line))
                     break;
-                return;
+                return NULL;
             case '#':
                 break;
             default: { /* error */
                 errorParse();
             }
         }
-        numberCommands
-        mutex_unlock();
-        sem_post(&consumer);
+    }
+    for (i = 0; i<numberThreads; i++){
+    	insertCommand("e EOF\n");
     }
     fclose(inputFile);
+    return NULL;
 }
 
 void *applyCommands(){
-    while(1){
-        if (numberCommands == 0 && reachedEndOfFile)
-                return;
-        sem_wait(&consumer);
-        mutex_lock();
-
-        const char* command = removeCommand();
-        
+    while(1){ 	
         char token;
         char name[MAX_INPUT_SIZE];
-        char new_name[MAX_INPUT_SIZE];
-        int numTokens = sscanf(command, "%c %s %s", &token, name, new_name);
-        
-        if (token == 'r' && numTokens != 3) {
+        //char new_name[MAX_INPUT_SIZE];
+        int iNumber;
+        sem_wait(&consumer);
+		mutex_lock(lock_c);
+		int numTokens = sscanf(inputCommands[(consptr++) % MAX_COMMANDS], "%c %s", &token, name/*, new_name*/);
+		sem_post(&producer);
+		//REMOVE COMMAND
+        //char new_name[MAX_INPUT_SIZE];
+       /*if (token == 'r' && numTokens != 3) {
             fprintf(stderr, "Error: invalid command in Queue\n");
             exit(EXIT_FAILURE);
-        } else if (numTokens != 2){
+        } else */
+        if (numTokens != 2){
             fprintf(stderr, "Error: invalid command in Queue\n");
             exit(EXIT_FAILURE);
         }
-        
-        int iNumber;
-
-        if (token == 'c') iNumber = obtainNewInumber(fs, name);
-        mutex_unlock();
 
         int searchResult;        
         switch (token)   {
             case 'c':
+            	iNumber = obtainNewInumber(fs, name);
+            	mutex_unlock(lock_c);
                 create(fs, name, iNumber);
                 break;
             case 'l':
+            	mutex_unlock(lock_c);
                 searchResult = lookup(fs, name);
                 if(!searchResult)
                     printf("%s not found\n", name);
@@ -168,20 +168,24 @@ void *applyCommands(){
                     printf("%s found with inumber %d\n", name, searchResult);
                 break;
             case 'd':
+            	mutex_unlock(lock_c);
                 delete(fs, name);
                 break;
+               /*
             case 'r':
                 rename(fs, name, new_name);
-            case 'e':
-                reachedEndOfFile = 1;
-                break;
+                */
+            case 'e': {
+            	mutex_unlock(lock_c);
+            	return NULL;
+            }
             default: { /* error */
+            	mutex_unlock(lock_c);
                 fprintf(stderr, "Error: command to apply\n");
                 exit(EXIT_FAILURE);
             }    
         }
-    sem_post(&productor);
-    }      
+    }    
 }
 
 void writeFile(char* fileName){
@@ -197,16 +201,15 @@ void writeFile(char* fileName){
     fclose(outputFile);
 }
 
-void excecuteThreads(){
+void excecuteThreads(void *input){
     int i;
     pthread_t *tid = malloc(numberThreads * sizeof(pthread_t));
     pthread_t inputThread;
 
-    if (pthread_create(&inputThread, NULL, processInput,/*argumentos*/) != 0){
+    if (pthread_create(&inputThread, NULL, processInput, input) != 0){
         printf("Failed to create thread\n");
         exit(EXIT_FAILURE);
     }
-    
     for (i=0; i < numberThreads; i++){
         if (pthread_create(&tid[i], NULL, applyCommands, NULL) != 0){
             printf("Failed to create thread\n");
@@ -218,24 +221,34 @@ void excecuteThreads(){
         printf("Failed to join thread\n");
         exit(EXIT_FAILURE);
     }
-
     for (i=0; i<numberThreads; i++){
-        if (pthread_join(tid[i], NULL) != 0)
+        if (pthread_join(tid[i], NULL) != 0){
             printf("Failed to join thread\n");
             exit(EXIT_FAILURE);
+        }
     }
     free(tid);
 }
 
-void init_mutex(){
+void init_mutex_sem(){
     #if defined (MUTEX) || defined (RWLOCK)
-    if (pthread_mutex_init(&lock, NULL) != 0)
+    if (pthread_mutex_init(&lock_p, NULL) != 0)
+    {
+        printf("Mutex init failed\n");
+        exit(EXIT_FAILURE);
+    }
+    if (pthread_mutex_init(&lock_c, NULL) != 0)
+    {
+        printf("Mutex init failed\n");
+        exit(EXIT_FAILURE);
+    }
+    if (pthread_mutex_init(&lock_iNumber, NULL) != 0)
     {
         printf("Mutex init failed\n");
         exit(EXIT_FAILURE);
     }
     #endif
-    if (sem_init(&productor, 0, MAX_COMMANDS) != 0){
+    if (sem_init(&producer, 0, MAX_COMMANDS) != 0){
         printf("Failed to create semaphore\n");
         exit(EXIT_FAILURE);
     }
@@ -252,10 +265,11 @@ double get_time(){
     return tv.tv_usec;
 }
 
-void executeCommands(){
+void executeCommands(void *input){
     #if defined (MUTEX) || defined (RWLOCK)
-    excecuteThreads();
+    excecuteThreads(input);
     #else
+    //FALTA NOSYNC
     applyCommands();
     #endif        
 }
@@ -263,17 +277,17 @@ void executeCommands(){
 int main(int argc, char* argv[]) {
     double begin, time_spent; 
     parseArgs(argc, argv);
-    init_mutex();
+    init_mutex_sem();
     fs = new_tecnicofs(numberBuckets);
 
     begin = get_time(); /*start clock*/
-    excecuteThreads(argv[1]);
+    executeCommands(argv[1]);
     time_spent = (get_time() - begin)/1000000.0; /*finish clock*/
     printf("TecnicoFS completed in %0.4f seconds.\n", time_spent);
 
     writeFile(argv[2]);
 
-    mutex_destroy();
+    mutex_destroy_sem();
     free_tecnicofs(fs);
     exit(EXIT_SUCCESS);
 }
