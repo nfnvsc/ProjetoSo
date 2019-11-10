@@ -87,16 +87,18 @@ void thread_fs_lock(tecnicofs_node* fs_node, int n){
 }
 
 //------------------------ADDED TRYLOCK FUNCTION---------------------
+
+//return 1 if locked
 int thread_fs_trylock(tecnicofs_node* fs_node){
 	#ifdef MUTEX
 	if(pthread_mutex_trylock(&fs_node->mutex_lock)){
-		thread_fs_unlock(fs_node);
+		//thread_fs_unlock(fs_node);
 		return 0;
 	}
 
 	#elif RWLOCK
 	if(pthread_rwlock_trywrlock(&fs_node->rw_lock)){
-		thread_fs_unlock(fs_node);
+		//thread_fs_unlock(fs_node);
 		return 0;
 	}
 	#endif
@@ -160,6 +162,24 @@ int lookup(tecnicofs* fs, char *name){
 	return 0;
 }
 
+int tryLockBoth(tecnicofs_node* node1, tecnicofs_node* node2){
+	int lock1, lock2;
+
+	lock1 = thread_fs_trylock(node1);
+
+	if (node1 != node2){
+		lock2 = thread_fs_trylock(node2);
+		if (lock1 && lock2) return 1;
+		else{
+			if (lock1) thread_fs_unlock(node1);
+			if (lock2) thread_fs_unlock(node2);
+			return 0;
+		} 	
+	}
+	else return lock1;
+
+}
+
 //-------------------ADDED RENAME FUCNTION-------------------------
 void renameFile(tecnicofs *fs, char* name, char* new_name){
 	int ableToRename = 0;
@@ -167,18 +187,11 @@ void renameFile(tecnicofs *fs, char* name, char* new_name){
 	tecnicofs_node* node_name = get_node(fs, name);
 	tecnicofs_node* node_newName = get_node(fs, new_name);
 
-	while(!ableToRename){
+	while(!tryLockBoth(node_name, node_newName)){
 		usleep(numberAttempts * 1000);
-		/*
-		if (node_name == node_newName)
-			if (thread_fs_trylock(node_name))
-				ableToRename = 1;
-			else numberAttempts++;
-		else{
-			if (thread_fs_trylock(node_name) && thread_fs_trylock(node_newName))
-				ableToRename = 1;
-			else numberAttempts++;
-		}*/
+		numberAttempts++;
+
+	/*
 		if (node_name == node_newName){
 			#ifdef MUTEX
 			if (!pthread_mutex_trylock(&node_name->mutex_lock))
@@ -215,6 +228,7 @@ void renameFile(tecnicofs *fs, char* name, char* new_name){
 			ableToRename = 1;
 			#endif
 		}
+		*/
 	}
 	
 	node* searchNode = search(node_name->bstRoot, name);
