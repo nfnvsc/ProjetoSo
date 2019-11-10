@@ -253,15 +253,15 @@ double get_time(){
 }
 
 int main(int argc, char* argv[]) {
-    double begin, time_spent; 
+    TIMER_T beginTime, endTime; 
     parseArgs(argc, argv);
     init_mutex_sem();
     fs = new_tecnicofs(numberBuckets);
 
-    begin = get_time(); /*start clock*/
+    TIMER_READ(beginTime); /*start clock*/
     excecuteThreads(argv[1]);
-    time_spent = (get_time() - begin)/1000000.0; /*finish clock*/
-    printf("TecnicoFS completed in %0.4f seconds.\n", time_spent);
+    TIMER_READ(endTime); /*start clock*/
+    printf("TecnicoFS completed in %0.4f seconds.\n", TIMER_DIFF_SECONDS(beginTime, endTime));
 
     writeFile(argv[2]);
     mutex_destroy_sem();

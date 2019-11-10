@@ -182,7 +182,7 @@ int tryLockBoth(tecnicofs_node* node1, tecnicofs_node* node2){
 
 //-------------------ADDED RENAME FUCNTION-------------------------
 void renameFile(tecnicofs *fs, char* name, char* new_name){
-	int ableToRename = 0;
+	//int ableToRename = 0;
 	int numberAttempts = 0;
 	tecnicofs_node* node_name = get_node(fs, name);
 	tecnicofs_node* node_newName = get_node(fs, new_name);
