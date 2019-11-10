@@ -27,6 +27,7 @@ void delete(tecnicofs* fs, char *name);
 int lookup(tecnicofs* fs, char *name);
 void renameFile(tecnicofs* fs, char* name, char* new_name);
 void print_tecnicofs_tree(FILE * fp, tecnicofs *fs);
+int thread_fs_trylock(tecnicofs_node* fs_node);
 void thread_fs_lock(tecnicofs_node* fs_node, int n);
 void thread_fs_unlock(tecnicofs_node* fs_node);
 void init_lock(tecnicofs_node* fs_node);

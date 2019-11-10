@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#define MAX 10
 
 //pthread_mutex_t lock;
 
@@ -164,14 +163,13 @@ int lookup(tecnicofs* fs, char *name){
 //-------------------ADDED RENAME FUCNTION-------------------------
 void renameFile(tecnicofs *fs, char* name, char* new_name){
 	int ableToRename = 0;
-	int numberAttempts = 1;
+	int numberAttempts = 0;
 	tecnicofs_node* node_name = get_node(fs, name);
 	tecnicofs_node* node_newName = get_node(fs, new_name);
 
 	while(!ableToRename){
-		int delay = MAX * numberAttempts;
-		usleep(delay * 1000);
-		
+		usleep(numberAttempts * 1000);
+		/*
 		if (node_name == node_newName)
 			if (thread_fs_trylock(node_name))
 				ableToRename = 1;
@@ -180,6 +178,42 @@ void renameFile(tecnicofs *fs, char* name, char* new_name){
 			if (thread_fs_trylock(node_name) && thread_fs_trylock(node_newName))
 				ableToRename = 1;
 			else numberAttempts++;
+		}*/
+		if (node_name == node_newName){
+			#ifdef MUTEX
+			if (!pthread_mutex_trylock(&node_name->mutex_lock))
+				ableToRename = 1;
+			else numberAttempts++;
+			#elif RWLOCK
+			if (!pthread_rwlock_trywrlock(&node_name->rw_lock))
+				ableToRename = 1;
+			else numberAttempts++;
+			#else
+			ableToRename = 1;
+			#endif	
+		}
+		else{
+			#ifdef MUTEX
+			if (!pthread_mutex_trylock(&node_name->mutex_lock))
+				if (!pthread_mutex_trylock(&node_newName->mutex_lock))
+					ableToRename = 1;
+				else{
+					thread_fs_unlock(node_name);
+					numberAttempts++;
+				}
+			else numberAttempts++;
+			#elif RWLOCK
+			if (!pthread_rwlock_trywrlock(&node_name->rw_lock))
+				if (!pthread_rwlock_trywrlock(&node_newName->rw_lock))
+					ableToRename = 1;
+				else{
+					thread_fs_unlock(node_name);
+					numberAttempts++;
+				}
+			else numberAttempts++;
+			#else
+			ableToRename = 1;
+			#endif
 		}
 	}
 	
@@ -188,16 +222,14 @@ void renameFile(tecnicofs *fs, char* name, char* new_name){
 	if (searchNode != NULL){
 		int inumber = searchNode->inumber;
 		if (search(node_newName->bstRoot, new_name) == NULL){
+			printf("renaming\n");
 			node_name->bstRoot = remove_item(node_name->bstRoot, name);
 			node_newName->bstRoot = insert(node_newName->bstRoot, new_name, inumber);
 		}
-		else{
-			printf("%s already exists\n", new_name);
-			}
+		else printf("%s already exists\n", new_name);
 	}
-	else{
-	 	printf("%s file to rename not found\n", name);
-	}
+	else printf("%s file to rename not found\n", name);
+	
 	if (node_name == node_newName) thread_fs_unlock(node_name);
 	else{	
 		thread_fs_unlock(node_name);
