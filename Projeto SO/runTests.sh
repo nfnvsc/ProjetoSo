@@ -3,30 +3,25 @@
 #$2 - outputdir
 #$3 - maxthreads
 #$4 - numbuckets
-#tempFile - temporary file to be filtered
+#TEMP - temporary variable to be filtered
 
 for i in $(ls $1)
 do
-    #reset files
     : > $2/$i-1.txt
-    : > tempFile
+    TEMP=''
 
     echo InputFile=$i NumThreads=1
-    ./tecnicofs-nosync $1/$i $2/$i-1.txt 1 1 >> tempFile
-    grep "TecnicoFS" tempFile
+    TEMP=$(./tecnicofs-nosync $1/$i $2/$i-1.txt 1 1)
+    echo $TEMP | grep -o "TecnicoFS.*"
     
     for x in $(seq 2 $3)
     do
-        : > tempFile
         : > $2/$i-$x.txt
+        TEMP=''
 
         echo InputFile=$i NumThreads=$x 
-        ./tecnicofs-mutex $1/$i $2/$i-$x.txt $x $4 >> tempFile
-        grep "TecnicoFS" tempFile      
+        TEMP=$(./tecnicofs-mutex $1/$i $2/$i-$x.txt $x $4)
+        echo $TEMP | grep -o "TecnicoFS.*"      
     done
-    
-
 
 done
-#remove tempFile
-rm tempFile
