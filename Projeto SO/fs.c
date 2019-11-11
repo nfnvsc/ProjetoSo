@@ -4,8 +4,6 @@
 #include <string.h>
 #include <unistd.h>
 
-//pthread_mutex_t lock;
-
 
 int obtainNewInumber(tecnicofs* fs, char* name) {
 	int newInumber = ++fs->nextINumber;
@@ -22,7 +20,6 @@ tecnicofs* new_tecnicofs(int numberBuckets){
 	for(i = 0; i < numberBuckets; i++){
 		fs->fs_nodes[i] = new_tecnicofs_node();
 	}
-	//pthread_rwlock_init(&fs->rw_lock, NULL);
 	fs->numberBuckets = numberBuckets;
 	fs->nextINumber = 0;
 
@@ -86,19 +83,14 @@ void thread_fs_lock(tecnicofs_node* fs_node, int n){
 	#endif
 }
 
-//------------------------ADDED TRYLOCK FUNCTION---------------------
-
 //return 1 if locked
 int thread_fs_trylock(tecnicofs_node* fs_node){
 	#ifdef MUTEX
 	if(pthread_mutex_trylock(&fs_node->mutex_lock)){
-		//thread_fs_unlock(fs_node);
 		return 0;
 	}
-
 	#elif RWLOCK
 	if(pthread_rwlock_trywrlock(&fs_node->rw_lock)){
-		//thread_fs_unlock(fs_node);
 		return 0;
 	}
 	#endif
@@ -162,7 +154,7 @@ int lookup(tecnicofs* fs, char *name){
 	return 0;
 }
 
-int tryLockBoth(tecnicofs_node* node1, tecnicofs_node* node2){
+int tryLockBoth(tecnicofs_node* node1, tecnicofs_node* node2, int numberAttempts){
 	int lock1, lock2;
 
 	lock1 = thread_fs_trylock(node1);
@@ -173,6 +165,8 @@ int tryLockBoth(tecnicofs_node* node1, tecnicofs_node* node2){
 		else{
 			if (lock1) thread_fs_unlock(node1);
 			if (lock2) thread_fs_unlock(node2);
+			int delay = rand() % (numberAttempts + 1);
+			usleep(delay * 1000);
 			return 0;
 		} 	
 	}
@@ -180,55 +174,13 @@ int tryLockBoth(tecnicofs_node* node1, tecnicofs_node* node2){
 
 }
 
-//-------------------ADDED RENAME FUCNTION-------------------------
 void renameFile(tecnicofs *fs, char* name, char* new_name){
-	//int ableToRename = 0;
 	int numberAttempts = 0;
 	tecnicofs_node* node_name = get_node(fs, name);
 	tecnicofs_node* node_newName = get_node(fs, new_name);
 
-	while(!tryLockBoth(node_name, node_newName)){
-		usleep(numberAttempts * 1000);
+	while(!tryLockBoth(node_name, node_newName, numberAttempts)){
 		numberAttempts++;
-
-	/*
-		if (node_name == node_newName){
-			#ifdef MUTEX
-			if (!pthread_mutex_trylock(&node_name->mutex_lock))
-				ableToRename = 1;
-			else numberAttempts++;
-			#elif RWLOCK
-			if (!pthread_rwlock_trywrlock(&node_name->rw_lock))
-				ableToRename = 1;
-			else numberAttempts++;
-			#else
-			ableToRename = 1;
-			#endif	
-		}
-		else{
-			#ifdef MUTEX
-			if (!pthread_mutex_trylock(&node_name->mutex_lock))
-				if (!pthread_mutex_trylock(&node_newName->mutex_lock))
-					ableToRename = 1;
-				else{
-					thread_fs_unlock(node_name);
-					numberAttempts++;
-				}
-			else numberAttempts++;
-			#elif RWLOCK
-			if (!pthread_rwlock_trywrlock(&node_name->rw_lock))
-				if (!pthread_rwlock_trywrlock(&node_newName->rw_lock))
-					ableToRename = 1;
-				else{
-					thread_fs_unlock(node_name);
-					numberAttempts++;
-				}
-			else numberAttempts++;
-			#else
-			ableToRename = 1;
-			#endif
-		}
-		*/
 	}
 	
 	node* searchNode = search(node_name->bstRoot, name);
