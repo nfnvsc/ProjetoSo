@@ -246,12 +246,6 @@ void init_mutex_sem(){
     }
 }
 
-double get_time(){
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return tv.tv_usec;
-}
-
 int main(int argc, char* argv[]) {
     TIMER_T beginTime, endTime; 
     parseArgs(argc, argv);
