@@ -202,7 +202,7 @@ void excecuteThreads(void *input){
     }
 
    	#if defined (MUTEX) || defined (RWLOCK)
-    for (int i=0; i < numberThreads; i++){
+    for (int i=0; i < numberThreads; i++){  
         if (pthread_create(&tid[i], NULL, applyCommands, NULL) != 0){
             perror("Failed to create thread\n");
             
