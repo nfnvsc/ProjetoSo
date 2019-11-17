@@ -1,7 +1,0 @@
-{
-    "files.associations": {
-        "projetoLP": "prolog",
-        "*.pl": "prolog",
-        "pthread.h": "c"
-    }
-}
