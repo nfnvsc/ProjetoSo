@@ -7,8 +7,10 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <semaphore.h>
-#include "fs.h"
 #include <sys/time.h>
+#include "fs.h"
+#include "tecnicofs-api-constants.h"
+#include "tecnicofs-client-api.h"
 
 #define MAX_COMMANDS 10
 #define MAX_INPUT_SIZE 100
@@ -244,6 +246,29 @@ void init_mutex_sem(){
     if (sem_init(&consumer, 0, 0) != 0){
         perror("Failed to create semaphore\n");   
     }
+}
+
+int mountSocket(){
+    int sockfd, newsockfd, clilen, childpid, servlen;
+    struct sockaddr_un cli_addr, serv_addr;
+
+    /* Cria socket stream */
+    if ((sockfd = socket(AF_UNIX,SOCK_STREAM,0) ) < 0)
+        err_dump("server: can't open stream socket");
+
+    /* Elimina o nome, para o caso de já existir.*/
+    unlink(UNIXSTR_PATH);
+    
+    /* O nome serve para que os clientes possam identificar o servidor */
+    bzero((char *)&serv_addr, sizeof(serv_addr));
+    serv_addr.sun_family = AF_UNIX;
+    strcpy(serv_addr.sun_path, UNIXSTR_PATH);
+    servlen = strlen(serv_addr.sun_path) + sizeof(serv_addr.sun_family);
+
+    if (bind(sockfd, (struct sockaddr *) &serv_addr, servlen) < 0)
+        err_dump("server, can't bind local address");
+
+    listen(sockfd, 5);
 }
 
 int main(int argc, char* argv[]) {
