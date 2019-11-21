@@ -85,7 +85,6 @@ int tfsDelete(char *filename){
 }
 
 int tfsRename(char *filenameOld, char *filenameNew){
-    int n;
     char sendline[MAXLINE];
 
     strcpy(sendline, "r ");
