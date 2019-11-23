@@ -13,15 +13,22 @@ int obtainNewInumber(tecnicofs* fs, char* name) {
 tecnicofs* new_tecnicofs(int numberBuckets){
 	int i;
 	tecnicofs* fs = malloc(sizeof(tecnicofs));
+
 	if (!fs) {
 		perror("failed to allocate tecnicofs");
 	}
+
 	fs->fs_nodes = malloc(sizeof(tecnicofs_node*)*numberBuckets);
+
 	for(i = 0; i < numberBuckets; i++){
 		fs->fs_nodes[i] = new_tecnicofs_node();
+		fs->fs_nodes[i] = new_tecnicofs_node();
 	}
+
 	fs->numberBuckets = numberBuckets;
 	fs->nextINumber = 0;
+
+	inode_table_init();
 
 	return fs;
 }
@@ -127,20 +134,24 @@ tecnicofs_node* get_node(tecnicofs* fs, char *name){
 
 }
 
-void create(tecnicofs* fs, char *name, int inumber){
+int create(tecnicofs* fs, char *name, int inumber, uid_t user, permission ownerPerm, permission othersPerm){
 	tecnicofs_node* fs_node = get_node(fs, name);
 
 	thread_fs_lock(fs_node, 1);
 	fs_node->bstRoot = insert(fs_node->bstRoot, name, inumber);
+	
+	inode_create(user, ownerPerm, othersPerm);
 	thread_fs_unlock(fs_node);
 }
 
-void delete(tecnicofs* fs, char *name){
+int delete(tecnicofs* fs, char *name, uid_t user){
 	tecnicofs_node* fs_node = get_node(fs, name);
 
+	//check if has perms
 	thread_fs_lock(fs_node, 1);
 	fs_node->bstRoot = remove_item(fs_node->bstRoot, name);
 	thread_fs_unlock(fs_node);
+
 }
 
 int lookup(tecnicofs* fs, char *name){
@@ -174,7 +185,7 @@ int tryLockBoth(tecnicofs_node* node1, tecnicofs_node* node2, int numberAttempts
 
 }
 
-void renameFile(tecnicofs *fs, char* name, char* new_name){
+int renameFile(tecnicofs *fs, char* name, char* new_name){
 	int numberAttempts = 0;
 	tecnicofs_node* node_name = get_node(fs, name);
 	tecnicofs_node* node_newName = get_node(fs, new_name);

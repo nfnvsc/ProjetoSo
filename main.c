@@ -14,6 +14,7 @@
 
 #define MAX_COMMANDS 10
 #define MAX_INPUT_SIZE 100
+#define MAX_MESSAGE_ELEMENTS 3
 
 int numberThreads = 0;
 int numberBuckets = 0;
@@ -67,12 +68,11 @@ static void displayUsage (const char* appName){
 }
 
 static void parseArgs (long argc, char* const argv[]){
-    if (argc != 5) {
+    if (argc != 4) {
         fprintf(stderr, "Invalid format:\n");
         displayUsage(argv[0]);
     }
-    numberThreads = atoi(argv[3]);
-    numberBuckets = atoi(argv[4]);
+    numberBuckets = atoi(argv[3]);
 }       
 
 int insertCommand(char* data) {
@@ -181,6 +181,15 @@ void *applyCommands(){
 	}
 }
 
+void formatMessage(char* inputStream){
+    if (inputStream == NULL) return;
+
+    char** outputStream[MAX_MESSAGE_ELEMENTS];
+    sscanf("%c %s %s", outputStream[0], outputStream[1], outputStream[3]);
+    
+    return outputStream;
+}
+
 void writeFile(char* fileName){
     FILE *outputFile;
 
@@ -248,8 +257,8 @@ void init_mutex_sem(){
     }
 }
 
-int mountSocket(){
-    int sockfd, newsockfd, clilen, childpid, servlen;
+int mountSocket(char* adress){
+    int sockfd, servlen;
     struct sockaddr_un cli_addr, serv_addr;
 
     /* Cria socket stream */
@@ -257,12 +266,12 @@ int mountSocket(){
         err_dump("server: can't open stream socket");
 
     /* Elimina o nome, para o caso de já existir.*/
-    unlink(UNIXSTR_PATH);
+    unlink(adress);
     
     /* O nome serve para que os clientes possam identificar o servidor */
     bzero((char *)&serv_addr, sizeof(serv_addr));
     serv_addr.sun_family = AF_UNIX;
-    strcpy(serv_addr.sun_path, UNIXSTR_PATH);
+    strcpy(serv_addr.sun_path, adress);
     servlen = strlen(serv_addr.sun_path) + sizeof(serv_addr.sun_family);
 
     if (bind(sockfd, (struct sockaddr *) &serv_addr, servlen) < 0)
@@ -277,6 +286,8 @@ int main(int argc, char* argv[]) {
     init_mutex_sem();
     fs = new_tecnicofs(numberBuckets);
 
+    mountSocket(argv[1]);
+
     TIMER_READ(beginTime); /*start clock*/
     excecuteThreads(argv[1]);
     TIMER_READ(endTime); /*start clock*/
@@ -287,5 +298,8 @@ int main(int argc, char* argv[]) {
     free_tecnicofs(fs);
     exit(EXIT_SUCCESS);
 }
+
+
+
 
 

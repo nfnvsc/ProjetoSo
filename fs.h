@@ -2,6 +2,7 @@
 #define FS_H
 #include "lib/bst.h"
 #include "lib/hash.h"
+#include "lib/inodes.h"
 #include "lib/timer.h"
 #include <pthread.h>
 
@@ -23,7 +24,7 @@ tecnicofs_node* new_tecnicofs_node();
 tecnicofs_node* get_node(tecnicofs* fs, char *name);
 
 void free_tecnicofs(tecnicofs* fs);
-void create(tecnicofs* fs, char *name, int inumber);
+void create(tecnicofs* fs, char *name, int inumber, uid_t owner, permission ownerPerm, permission othersPerm){
 void delete(tecnicofs* fs, char *name);
 int lookup(tecnicofs* fs, char *name);
 void renameFile(tecnicofs* fs, char* name, char* new_name);
