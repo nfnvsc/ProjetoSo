@@ -12,7 +12,7 @@
 #include "fs.h"
 #include "tecnicofs-api-constants.h"
 #include "tecnicofs-client-api.h"
-#include "unix.h"
+//#include "unix.h"
 
 #define MAX_COMMANDS 10
 #define MAX_INPUT_SIZE 100
@@ -156,7 +156,7 @@ void *applyCommands(){
         int searchResult;
         switch (token)   {
             case 'c':
-                create(fs, name, iNumber);
+                //create(fs, name, user, ownerPerm, othersPerm);
                 break;
             case 'l':
                 searchResult = lookup(fs, name);
@@ -166,10 +166,10 @@ void *applyCommands(){
                     printf("%s found with inumber %d\n", name, searchResult);
                 break;
             case 'd':
-                delete(fs, name);
+                //delete(fs, name, user);
                 break;
             case 'r':
-                renameFile(fs, name, new_name);
+                //renameFile(fs, name, new_name, user);
                 break;
             case 'e': {
             	insertCommand("e EOF\n");

@@ -138,8 +138,6 @@ int create(tecnicofs* fs, char *name, uid_t user, permission ownerPerm, permissi
 	fs_node->bstRoot = insert(fs_node->bstRoot, name, inumber);
 	thread_fs_unlock(fs_node);
 
-	inode_set(inumber, fs_node->bstRoot->key, strlen(fs_node->bstRoot->key));
-
 	return 0;
 }
 
@@ -152,6 +150,8 @@ int delete(tecnicofs* fs, char *name, uid_t user){
 	inode_get(inumber, owner, NULL, NULL, NULL, 1); //get owner
 
 	if(*owner != user) return 1; //ERRO FICHEIRO NAO PERTENCE AO USER
+
+	inode_delete(inumber);
 
 	tecnicofs_node* fs_node = get_node(fs, name);
 
@@ -229,8 +229,12 @@ int renameFile(tecnicofs *fs, char* name, char* new_name, uid_t user){
 
 	return 0;
 }
-
-
+/*
+int openFile(tecnicofs *fs, char* name, );
+int closeFile();
+int readFile();
+int writeFile();
+*/
 
 void print_tecnicofs_tree(FILE * fp, tecnicofs *fs){
 	int i;

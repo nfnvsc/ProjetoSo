@@ -14,14 +14,15 @@ RWLOCK = -DRWLOCK
 
 all: tecnicofs-nosync tecnicofs-mutex tecnicofs-rwlock
 
-tecnicofs-nosync: lib/bst.o fs.o-nosync main.o-nosync
-	$(LD) $(CFLAGS) $(LDFLAGS) -o tecnicofs-nosync lib/bst.o lib/hash.o fs.o main.o 
+tecnicofs-nosync: lib/bst.o lib/inodes.o fs.o-nosync main.o-nosync
+	$(LD) $(CFLAGS) $(LDFLAGS) -o tecnicofs-nosync lib/bst.o lib/inodes.o lib/hash.o fs.o main.o 
 
-tecnicofs-mutex: lib/bst.o fs.o-mutex main.o-mutex
-	$(LD) $(CFLAGS) $(LDFLAGS) $(MUTEX) -o tecnicofs-mutex lib/bst.o lib/hash.o fs.o main.o 
+tecnicofs-mutex: lib/bst.o lib/inodes.o fs.o-mutex main.o-mutex
+	$(LD) $(CFLAGS) $(LDFLAGS) $(MUTEX) -o tecnicofs-mutex lib/bst.o lib/inodes.o lib/hash.o fs.o main.o 
 
-tecnicofs-rwlock: lib/bst.o fs.o-rwlock main.o-rwlock
-	$(LD) $(CFLAGS) $(LDFLAGS) $(MUTEX) -o tecnicofs-rwlock lib/bst.o lib/hash.o fs.o main.o 
+tecnicofs-rwlock: lib/bst.o lib/inodes.o fs.o-rwlock main.o-rwlock
+	$(LD) $(CFLAGS) $(LDFLAGS) $(MUTEX) -o tecnicofs-rwlock lib/bst.o lib/inodes.o lib/hash.o fs.o main.o 
+
 
 lib/bst.o: lib/bst.c lib/bst.h
 	$(CC) $(CFLAGS) -o lib/bst.o -c lib/bst.c
@@ -29,21 +30,24 @@ lib/bst.o: lib/bst.c lib/bst.h
 lib/hash.o: lib/hash.c lib/hash.h
 	$(CC) $(CFLAGS) -o lib/hash.o -c lib/hash.c
 
+lib/inodes.o: lib/inodes.c lib/inodes.h
+	$(CC) $(CFLAGS) -o lib/inodes.o -c lib/inodes.c
+
 #NOSYNC
-fs.o-nosync: fs.c fs.h lib/bst.h lib/hash.o
+fs.o-nosync: fs.c fs.h lib/bst.h lib/hash.o lib/inodes.o
 	$(CC) $(CFLAGS) -o fs.o -c fs.c
-main.o-nosync: main.c fs.h lib/bst.h
+main.o-nosync: main.c fs.h lib/bst.h lib/inodes.h
 	$(CC) $(CFLAGS) -o main.o -c main.c
 #MUTEX
-fs.o-mutex: fs.c fs.h lib/bst.h lib/hash.o
+fs.o-mutex: fs.c fs.h lib/bst.h lib/hash.o lib/inodes.o
 	$(CC) $(CFLAGS) $(MUTEX) -o fs.o -c fs.c
-main.o-mutex: main.c fs.h lib/bst.h
+main.o-mutex: main.c fs.h lib/bst.h lib/inodes.h
 	$(CC) $(CFLAGS) $(MUTEX) -o main.o -c main.c
 
 #RWLOCK
-fs.o-rwlock: fs.c fs.h lib/bst.h lib/hash.o
+fs.o-rwlock: fs.c fs.h lib/bst.h lib/hash.o lib/inodes.o
 	$(CC) $(CFLAGS) $(RWLOCK) -o fs.o -c fs.c
-main.o-rwlock: main.c fs.h lib/bst.h
+main.o-rwlock: main.c fs.h lib/bst.h lib/inodes.h
 	$(CC) $(CFLAGS) $(RWLOCK) -o main.o -c main.c
 
 
