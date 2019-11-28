@@ -4,12 +4,6 @@
 #include <string.h>
 #include <unistd.h>
 
-
-int obtainNewInumber(tecnicofs* fs, char* name) {
-	int newInumber = ++fs->nextINumber;
-	return newInumber;
-}
-
 tecnicofs* new_tecnicofs(int numberBuckets){
 	int i;
 	tecnicofs* fs = malloc(sizeof(tecnicofs));
@@ -200,7 +194,7 @@ int tryLockBoth(tecnicofs_node* node1, tecnicofs_node* node2, int numberAttempts
 
 }
 
-int rename(tecnicofs *fs, char* name, char* new_name, uid_t user){
+int renameFile(tecnicofs *fs, char* name, char* new_name, uid_t user){
 	int numberAttempts = 0;
 	tecnicofs_node* node_name = get_node(fs, name);
 	tecnicofs_node* node_newName = get_node(fs, new_name);

@@ -151,7 +151,6 @@ void *applyCommands(){
 
 		mutex_lock(&lock_c);
 		sscanf(inputCommands[(consptr++) % MAX_COMMANDS], "%c %s %s", &token, name, new_name);
-		if (token == 'c') iNumber = obtainNewInumber(fs, name);
 		mutex_unlock(&lock_c);
 
         int searchResult;

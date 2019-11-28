@@ -26,7 +26,7 @@ void free_tecnicofs(tecnicofs* fs);
 int create(tecnicofs* fs, char *name, uid_t user, permission ownerPerm, permission othersPerm);
 int delete(tecnicofs* fs, char *name, uid_t user);
 int lookup(tecnicofs* fs, char *name);
-int rename(tecnicofs *fs, char* name, char* new_name, uid_t user);
+int renameFile(tecnicofs *fs, char* name, char* new_name, uid_t user);
 void print_tecnicofs_tree(FILE * fp, tecnicofs *fs);
 int thread_fs_trylock(tecnicofs_node* fs_node);
 int tryLockBoth(tecnicofs_node* node1, tecnicofs_node* node2, int numberAttempts);
