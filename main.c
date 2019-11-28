@@ -8,13 +8,15 @@
 #include <unistd.h>
 #include <semaphore.h>
 #include <sys/time.h>
+#include <sys/socket.h>
 #include "fs.h"
 #include "tecnicofs-api-constants.h"
 #include "tecnicofs-client-api.h"
+#include "unix.h"
 
 #define MAX_COMMANDS 10
 #define MAX_INPUT_SIZE 100
-#define MAX_MESSAGE_ELEMENTS 3
+#define MAX_CLIENTS 5
 
 int numberThreads = 0;
 int numberBuckets = 0;
@@ -23,6 +25,7 @@ tecnicofs* fs;
 char inputCommands[MAX_COMMANDS][MAX_INPUT_SIZE];
 int prodptr = 0;
 int consptr = 0;
+int sockfd;
 
 pthread_mutex_t lock_p, lock_c;
 sem_t producer;
@@ -68,7 +71,7 @@ static void displayUsage (const char* appName){
 }
 
 static void parseArgs (long argc, char* const argv[]){
-    if (argc != 4) {
+    if (argc != 4) {    //args--> tecnicofs nomesocket outputfile numbuckets
         fprintf(stderr, "Invalid format:\n");
         displayUsage(argv[0]);
     }
@@ -89,6 +92,7 @@ void errorParse(){
     
 }
 
+/*
 void *processInput(void *fileName){
     char line[MAX_INPUT_SIZE];
     FILE *inputFile;
@@ -105,7 +109,7 @@ void *processInput(void *fileName){
 
         int numTokens = sscanf(line, "%c %s %s", &token, arg, new_name);
 
-        /* perform minimal validation */
+        perform minimal validation
         if (numTokens < 1) {
             continue;
         }
@@ -126,7 +130,7 @@ void *processInput(void *fileName){
                 return NULL;
             case '#':
                 break;
-            default: { /* error */
+            default: {  error 
                 errorParse();
             }
         }
@@ -135,6 +139,7 @@ void *processInput(void *fileName){
     fclose(inputFile);
     return NULL;
 }
+*/
 
 void *applyCommands(){
     while(1){ 	
@@ -144,12 +149,10 @@ void *applyCommands(){
         int iNumber;
 
 
-        sem_wait(&consumer);
 		mutex_lock(&lock_c);
 		sscanf(inputCommands[(consptr++) % MAX_COMMANDS], "%c %s %s", &token, name, new_name);
 		if (token == 'c') iNumber = obtainNewInumber(fs, name);
 		mutex_unlock(&lock_c);
-        sem_post(&producer);
 
         int searchResult;
         switch (token)   {
@@ -181,15 +184,6 @@ void *applyCommands(){
 	}
 }
 
-void formatMessage(char* inputStream){
-    if (inputStream == NULL) return;
-
-    char** outputStream[MAX_MESSAGE_ELEMENTS];
-    sscanf("%c %s %s", outputStream[0], outputStream[1], outputStream[3]);
-    
-    return outputStream;
-}
-
 void writeFile(char* fileName){
     FILE *outputFile;
 
@@ -201,7 +195,7 @@ void writeFile(char* fileName){
 
     fclose(outputFile);
 }
-
+/*
 void excecuteThreads(void *input){
     pthread_t inputThread;
     #if defined (MUTEX) || defined (RWLOCK)
@@ -236,7 +230,7 @@ void excecuteThreads(void *input){
     free(tid);
     #endif
 }
-
+*/
 void init_mutex_sem(){
     #if defined (MUTEX) || defined (RWLOCK)
     if (pthread_mutex_init(&lock_c, NULL) != 0)
@@ -257,49 +251,81 @@ void init_mutex_sem(){
     }
 }
 
-int mountSocket(char* adress){
-    int sockfd, servlen;
-    struct sockaddr_un cli_addr, serv_addr;
+void *str_echo(void *sockfd){
+    int n;
+    char line[MAX_INPUT_SIZE];
+    //char output[MAX_INPUT_SIZE];
+
+    for (;;){
+        /* Lê uma linha do socket */
+        n = read(*(int*)sockfd, line, MAX_INPUT_SIZE);
+        if (n == 0) return NULL;
+        else if (n < 0) perror("str_echo: readline error");
+        //else output = applyCommands(line);
+
+        /*Reenvia a linha para o socket. n conta com o \0 da string,
+        caso contrário perdia-se sempre um caracter!*/
+        /*if(write(sockfd, line, n) != n)
+            perror("str_echo:write error");
+        */
+        printf("%s\n", line);
+    }
+}
+
+void mountSocket(char* socketName){
+    int servlen;
+    struct sockaddr_un serv_addr;
 
     /* Cria socket stream */
     if ((sockfd = socket(AF_UNIX,SOCK_STREAM,0) ) < 0)
-        err_dump("server: can't open stream socket");
+        perror("server: can't open stream socket");
 
     /* Elimina o nome, para o caso de já existir.*/
-    unlink(adress);
+    unlink(socketName);
     
     /* O nome serve para que os clientes possam identificar o servidor */
     bzero((char *)&serv_addr, sizeof(serv_addr));
     serv_addr.sun_family = AF_UNIX;
-    strcpy(serv_addr.sun_path, adress);
+    strcpy(serv_addr.sun_path, socketName);
     servlen = strlen(serv_addr.sun_path) + sizeof(serv_addr.sun_family);
 
     if (bind(sockfd, (struct sockaddr *) &serv_addr, servlen) < 0)
-        err_dump("server, can't bind local address");
+        perror("server, can't bind local address");
 
     listen(sockfd, 5);
 }
 
+void receiveClients(){
+    struct sockaddr_un cli_addr;
+    int newsockfd, i, clilen;
+    pthread_t *clientThreads = malloc(MAX_INPUT_SIZE * sizeof(pthread_t));
+    for (i = 0; i < MAX_CLIENTS; i = (i + 1) % MAX_CLIENTS){
+        newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+        if (newsockfd < 0) perror("server: accept error");
+        if (pthread_create(&clientThreads[i], NULL, str_echo, (void*) &newsockfd) != 0){
+            perror("Failed to create thread\n");
+        }
+        close(newsockfd);
+    }
+}
+
 int main(int argc, char* argv[]) {
-    TIMER_T beginTime, endTime; 
+    //TIMER_T beginTime, endTime; 
     parseArgs(argc, argv);
     init_mutex_sem();
     fs = new_tecnicofs(numberBuckets);
-
     mountSocket(argv[1]);
 
-    TIMER_READ(beginTime); /*start clock*/
+    /*
+    TIMER_READ(beginTime); start clock
     excecuteThreads(argv[1]);
-    TIMER_READ(endTime); /*start clock*/
+    TIMER_READ(endTime); start clock
     printf("TecnicoFS completed in %0.4f seconds.\n", TIMER_DIFF_SECONDS(beginTime, endTime));
-
+    */
     writeFile(argv[2]);
     mutex_destroy_sem();
     free_tecnicofs(fs);
     exit(EXIT_SUCCESS);
 }
-
-
-
 
 
