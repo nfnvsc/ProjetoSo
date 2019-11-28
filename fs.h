@@ -14,7 +14,6 @@ typedef struct tecnicofs_node {
 
 typedef struct tecnicofs {
     tecnicofs_node** fs_nodes;
-    int nextINumber;
     int numberBuckets;
 } tecnicofs;
 
@@ -24,10 +23,10 @@ tecnicofs_node* new_tecnicofs_node();
 tecnicofs_node* get_node(tecnicofs* fs, char *name);
 
 void free_tecnicofs(tecnicofs* fs);
-void create(tecnicofs* fs, char *name, int inumber, uid_t owner, permission ownerPerm, permission othersPerm){
-void delete(tecnicofs* fs, char *name);
+int create(tecnicofs* fs, char *name, uid_t user, permission ownerPerm, permission othersPerm);
+int delete(tecnicofs* fs, char *name, uid_t user);
 int lookup(tecnicofs* fs, char *name);
-void renameFile(tecnicofs* fs, char* name, char* new_name);
+int rename(tecnicofs *fs, char* name, char* new_name, uid_t user);
 void print_tecnicofs_tree(FILE * fp, tecnicofs *fs);
 int thread_fs_trylock(tecnicofs_node* fs_node);
 int tryLockBoth(tecnicofs_node* node1, tecnicofs_node* node2, int numberAttempts);

@@ -26,7 +26,6 @@ tecnicofs* new_tecnicofs(int numberBuckets){
 	}
 
 	fs->numberBuckets = numberBuckets;
-	fs->nextINumber = 0;
 
 	inode_table_init();
 
@@ -134,23 +133,39 @@ tecnicofs_node* get_node(tecnicofs* fs, char *name){
 
 }
 
-int create(tecnicofs* fs, char *name, int inumber, uid_t user, permission ownerPerm, permission othersPerm){
+int create(tecnicofs* fs, char *name, uid_t user, permission ownerPerm, permission othersPerm){
+	if (lookup(fs, name) != 0) return 1; //ERRO JA EXISTE FICHEIRO
+
 	tecnicofs_node* fs_node = get_node(fs, name);
+
+	int inumber = inode_create(user, ownerPerm, othersPerm);
 
 	thread_fs_lock(fs_node, 1);
 	fs_node->bstRoot = insert(fs_node->bstRoot, name, inumber);
-	
-	inode_create(user, ownerPerm, othersPerm);
 	thread_fs_unlock(fs_node);
+
+	inode_set(inumber, fs_node->bstRoot->key, strlen(fs_node->bstRoot->key));
+
+	return 0;
 }
 
 int delete(tecnicofs* fs, char *name, uid_t user){
+	int inumber;
+	uid_t *owner;
+
+	if ((inumber = lookup(fs, name)) == 0) return 1; //ERRO NAO EXISTE FICHEIRO
+
+	inode_get(inumber, owner, NULL, NULL, NULL, 1); //get owner
+
+	if(*owner != user) return 1; //ERRO FICHEIRO NAO PERTENCE AO USER
+
 	tecnicofs_node* fs_node = get_node(fs, name);
 
-	//check if has perms
 	thread_fs_lock(fs_node, 1);
 	fs_node->bstRoot = remove_item(fs_node->bstRoot, name);
 	thread_fs_unlock(fs_node);
+
+	return 0;
 
 }
 
@@ -185,7 +200,7 @@ int tryLockBoth(tecnicofs_node* node1, tecnicofs_node* node2, int numberAttempts
 
 }
 
-int renameFile(tecnicofs *fs, char* name, char* new_name){
+int rename(tecnicofs *fs, char* name, char* new_name, uid_t user){
 	int numberAttempts = 0;
 	tecnicofs_node* node_name = get_node(fs, name);
 	tecnicofs_node* node_newName = get_node(fs, new_name);
@@ -198,6 +213,11 @@ int renameFile(tecnicofs *fs, char* name, char* new_name){
 	
 	if (searchNode != NULL){
 		int inumber = searchNode->inumber;
+		uid_t *owner;
+
+		inode_get(inumber, owner, NULL, NULL, NULL, 1); //get owner
+		if (user != *owner) return 1; //ERRO FICHEIRO NAO PERTENCE AO USER
+
 		if (search(node_newName->bstRoot, new_name) == NULL){
 			printf("renaming\n");
 			node_name->bstRoot = remove_item(node_name->bstRoot, name);
@@ -212,6 +232,8 @@ int renameFile(tecnicofs *fs, char* name, char* new_name){
 		thread_fs_unlock(node_name);
 		thread_fs_unlock(node_newName);
 	}
+
+	return 0;
 }
 
 

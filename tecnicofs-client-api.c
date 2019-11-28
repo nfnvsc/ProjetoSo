@@ -94,3 +94,54 @@ int tfsRename(char *filenameOld, char *filenameNew){
 
     sendMessage(sendline);
 }
+
+int tfsOpen(char *filename, permission mode){
+    char sendline[MAXLINE];
+    char aux[3];
+
+    strcpy(sendline, "o ");
+
+    strcat(sendline, filename);
+    
+    sprintf(aux, " %d", (int)mode);
+    strcat(sendline, aux);
+
+    sendMessage(sendline);
+}
+
+int tfsClose(int fd){
+    char sendline[MAXLINE];
+    char aux[3];
+
+    strcpy(sendline, "x ");
+    sprintf(aux, " %d", fd);
+    strcat(sendline, aux);
+
+    sendMessage(sendline);
+}
+
+int tfsRead(int fd, char *buffer, int len){
+    char sendline[MAXLINE];
+    char aux[3];
+
+    strcpy(sendline, "l ");
+    sprintf(aux, " %d", fd);
+    strcat(sendline, aux);
+    sprintf(aux, " %d", len);
+    strcat(sendline, aux);
+
+    sendMessage(sendline); //recebe string e copia para o buffer
+}
+
+int tfsWrite(int fd, char *buffer, int len){
+    char sendline[MAXLINE];
+    char aux[3];
+
+    strcpy(sendline, "w ");
+    sprintf(aux, " %d ", fd);
+    strcat(sendline, aux);
+
+    strncat(sendline, buffer, len);
+
+    sendMessage(sendline);
+}
