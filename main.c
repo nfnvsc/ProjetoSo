@@ -1,17 +1,16 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
-#include <getopt.h>
 #include <string.h>
+#include <time.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <semaphore.h>
 #include <sys/time.h>
+#include <sys/types.h>
 #include <sys/socket.h>
-
+#include <sys/un.h>
 #include "fs.h"
-#include "tecnicofs-api-constants.h"
-#include "tecnicofs-client-api.h"
-//#include "unix.h"
 
 #define MAX_COMMANDS 10
 #define MAX_INPUT_SIZE 128
@@ -90,60 +89,10 @@ int insertCommand(char* data) {
 }
 
 void errorParse(){
-    fprintf(stderr, "Error: command invalid\n");
-    
+    fprintf(stderr, "Error: command invalid\n");    
 }
 
-/*
-void *processInput(void *fileName){
-    char line[MAX_INPUT_SIZE];
-    FILE *inputFile;
-	inputFile = fopen(fileName, "r");\
-    if (!inputFile){
-        printf("\nFile not found."); 
-    }
-
-   
-    while (fgets(line, sizeof(line)/sizeof(char), inputFile)) {
-        char token;
-        char arg[MAX_INPUT_SIZE];
-        char new_name[MAX_INPUT_SIZE];
-
-        int numTokens = sscanf(line, "%c %s %s", &token, arg, new_name);
-
-        perform minimal validation
-        if (numTokens < 1) {
-            continue;
-        }
-        switch (token) {
-            case 'c':
-            case 'l':
-            case 'd':
-                if(numTokens != 2)
-                    errorParse();
-                if(insertCommand(line))
-                    break;
-                return NULL;
-            case 'r':
-                if (numTokens != 3)
-                    errorParse();
-            	if(insertCommand(line))
-                    break;
-                return NULL;
-            case '#':
-                break;
-            default: {  error 
-                errorParse();
-            }
-        }
-    }
-    insertCommand("e EOF\n");
-    fclose(inputFile);
-    return NULL;
-}
-*/
-
-void *applyCommands(char *line, int user){ 	
+int applyCommands(char *line, int user){ 	
     char token, arg1[MAX_INPUT_SIZE], arg2[MAX_INPUT_SIZE];
 
     int permissions;
@@ -152,22 +101,22 @@ void *applyCommands(char *line, int user){
 
     switch (token)   {
         case 'c':
-            permissions = atoi(arg2); /*permissions = ab --> a = ownerpermissions
-                                                                 b = othersPermissions*/
-            create(fs, arg1, user, permissions / 10, permissions % 10); //arg1 = filename
+            permissions = atoi(arg2); /*permissions = (int) ab
+                                                        a = ownerpermissions                                                
+                                                        b = othersPermissions*/
+            return create(fs, arg1, user, permissions / 10, permissions % 10); //arg1 = filename
             break;
         case 'd':
-            delete(fs, arg1, user); //arg1 = filename
+            return delete(fs, arg1, user); //arg1 = filename
             break;
         case 'r':
-            renameFile(fs, arg1, arg2, user);   //arg1 = filenameOld, arg2 = filenameNew
+            return renameFile(fs, arg1, arg2, user);   //arg1 = filenameOld, arg2 = filenameNew
             break;
         default: { /* error */
             fprintf(stderr, "Error: command to apply\n");    
             exit(EXIT_FAILURE);      
         }
     }	
-    return NULL;
 }
 
 void writeFile(char* fileName){
@@ -181,42 +130,7 @@ void writeFile(char* fileName){
 
     fclose(outputFile);
 }
-/*
-void excecuteThreads(void *input){
-    pthread_t inputThread;
-    #if defined (MUTEX) || defined (RWLOCK)
-    pthread_t *tid = malloc(numberThreads * sizeof(pthread_t));
-    #endif
 
-    if (pthread_create(&inputThread, NULL, processInput, input) != 0){
-        perror("Failed to create thread\n");
-    }
-
-   	#if defined (MUTEX) || defined (RWLOCK)
-    for (int i=0; i < numberThreads; i++){  
-        if (pthread_create(&tid[i], NULL, applyCommands, NULL) != 0){
-            perror("Failed to create thread\n");
-            
-        }        
-    }
-    #else
-    applyCommands();
-    #endif
-
-    if (pthread_join(inputThread, NULL) != 0){
-        perror("Failed to join thread\n");
-        
-    }
-    #if defined (MUTEX) || defined (RWLOCK)
-    for (int i=0; i<numberThreads; i++){
-        if (pthread_join(tid[i], NULL) != 0){
-            perror("Failed to join thread\n");
-        }
-    }
-    free(tid);
-    #endif
-}
-*/
 void init_mutex_sem(){
     #if defined (MUTEX) || defined (RWLOCK)
     if (pthread_mutex_init(&lock_c, NULL) != 0)
@@ -238,9 +152,10 @@ void init_mutex_sem(){
 }
 
 void *str_echo(void *sockfd){
-    int n, len;
+    int n;
+    socklen_t len;
     char line[MAX_INPUT_SIZE];
-    char output[MAX_INPUT_SIZE];
+    int output;
 
     for (;;){
         /* Lê uma linha do socket */
@@ -258,7 +173,7 @@ void *str_echo(void *sockfd){
         }
         /*Reenvia a linha para o socket. n conta com o \0 da string,
         caso contrário perdia-se sempre um caracter!*/
-        if(write(*(int*)sockfd, line, n) != n)
+        if(write(*(int*)sockfd, &output, n) != n)
             perror("str_echo:write error");
         printf("%s\n", line);
     }
