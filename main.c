@@ -15,7 +15,7 @@
 //#include "unix.h"
 
 #define MAX_COMMANDS 10
-#define MAX_INPUT_SIZE 100
+#define MAX_INPUT_SIZE 128
 #define MAX_CLIENTS 5
 
 int numberThreads = 0;
@@ -144,45 +144,36 @@ void *processInput(void *fileName){
 }
 */
 
-void *applyCommands(){
-    while(1){ 	
-        char token;
-        char name[MAX_INPUT_SIZE];
-        char new_name[MAX_INPUT_SIZE];
-        //int iNumber;
+void *applyCommands(char *line, int user){ 	
+    char token;
+    char fileName[MAX_INPUT_SIZE];
+    char new_name[MAX_INPUT_SIZE];
+	//sscanf(inputCommands[(consptr++) % MAX_COMMANDS], "%c %s %s %s %s", &token, fileName, arg1, arg2, ar3);
 
-		mutex_lock(&lock_c);
-		sscanf(inputCommands[(consptr++) % MAX_COMMANDS], "%c %s %s", &token, name, new_name);
-		mutex_unlock(&lock_c);
-
-        int searchResult;
-        switch (token)   {
-            case 'c':
-                //create(fs, name, user, ownerPerm, othersPerm);
-                break;
-            case 'l':
-                searchResult = lookup(fs, name);
-                if(!searchResult)
-                    printf("%s not found\n", name);
-                else
-                    printf("%s found with inumber %d\n", name, searchResult);
-                break;
-            case 'd':
-                //delete(fs, name, user);
-                break;
-            case 'r':
-                //renameFile(fs, name, new_name, user);
-                break;
-            case 'e': {
-            	insertCommand("e EOF\n");
-            	return NULL;
-            }
-            default: { /* error */
-                fprintf(stderr, "Error: command to apply\n");    
-                exit(EXIT_FAILURE);      
-            }
-    	}	    
-	}
+    int searchResult;
+    switch (token)   {
+        case 'c':
+            //create(fs, fileName, user, arg1, arg2);
+            break;
+        case 'l':
+            searchResult = lookup(fs, fileName);
+            if(!searchResult)
+                printf("%s not found\n", fileName);
+            else
+                printf("%s found with inumber %d\n", fileName, searchResult);
+            break;
+        case 'd':
+            //delete(fs, fileName, user);
+            break;
+        case 'r':
+            //renameFile(fs, fileName, new_name, user);
+            break;
+        default: { /* error */
+            fprintf(stderr, "Error: command to apply\n");    
+            exit(EXIT_FAILURE);      
+        }
+    }	
+    return NULL;
 }
 
 void writeFile(char* fileName){
@@ -262,13 +253,12 @@ void *str_echo(void *sockfd){
         n = read(*(int*)sockfd, line, MAX_INPUT_SIZE);
         if (n == 0) return NULL;
         else if (n < 0) perror("str_echo: readline error");
-        //else output = applyCommands(line);
+        //else output = applyCommands(line. *(int*)sockfd);
 
         /*Reenvia a linha para o socket. n conta com o \0 da string,
         caso contrário perdia-se sempre um caracter!*/
-        /*if(write(sockfd, line, n) != n)
+        if(write(*(int*)sockfd, line, n) != n)
             perror("str_echo:write error");
-        */
         printf("%s\n", line);
     }
 }
@@ -311,7 +301,7 @@ void receiveClients(){
             perror("Failed to create thread\n");
         }
         
-        close(newsockfd);
+       // close(newsockfd);
     }
 }
 

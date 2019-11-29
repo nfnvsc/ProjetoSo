@@ -35,16 +35,17 @@ int tfsUnmount(){
 }
 
 void sendMessage(char* sendline){
-    int n;
+    int n, error;
     char recvline[MAXLINE+1];
 
     /* Envia string para sockfd.
     Note-se que o \0 não é enviado */
     n = strlen(sendline);
 
-    if (send(sockfd, sendline, MAXLINE, 0) != n)
-        perror("str_cli:write error on socket");
 
+    if (error = write(sockfd, sendline, n) != n){
+        perror("str_cli:write error on socket");
+    }
     /* Tenta ler string de sockfd.
     Note-se que tem de terminar a string com \0 */
     n = read(sockfd, recvline, MAXLINE);
@@ -150,5 +151,8 @@ int tfsWrite(int fd, char *buffer, int len){
 int main(int argc, char** argv){
     tfsMount(argv[1]);
     tfsCreate("F1", 1, 2);
+    tfsCreate("F2", 1, 2);
+    tfsCreate("F3", 1, 2);
+    tfsUnmount();
 }
 //TESTE
