@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <files.h>
 
 tecnicofs* new_tecnicofs(int numberBuckets){
 	int i;
@@ -228,6 +229,49 @@ int renameFile(tecnicofs *fs, char* name, char* new_name, uid_t user){
 	}
 
 	return 0;
+}
+
+int check_perms(uid_t user, int mode, int inumber){
+	uid_t owner = 1;
+	int ownerPerm, othersPerm;
+	inode_get(inumber, &owner, &ownerPerm, &othersPerm, NULL, 1); //get owner
+
+	if(user==owner) 
+		if(ownerPerm != mode && ownerPerm != 3) return 0; //ERRO USER NAO TEM PERMISSOES
+	else
+		if(othersPerm != mode && othersPerm != 3) return 0; //ERRO USER NAO TEM PERMISSOES
+	
+	return 1;
+	
+}
+//perms 0-none 1-wronly 2-rdonly 3-rdwr
+int openFile(tecnicofs *fs,open_file* open_file_table ,char* filename, int mode, uid_t user){
+	int inumber;
+
+	if((inumber = lookup(fs, filename)) == 0) return 0; //ERRO FICHEIRO NAO EXISTE
+
+	if(check_perms(user, mode, inumber) == 0) return 0; //ERRO USER NAO TEM PERM
+
+	return open(open_file_table, inumber, mode);
+
+	
+
+
+
+
+
+}
+
+int closeFile(open_file* open_file_table, int fd){
+	
+}
+
+int readFile(tecnicofs *fs,open_file* open_file_table ,char* filename, int mode){
+	
+}
+
+int writeFile(tecnicofs *fs,open_file* open_file_table ,char* filename, int mode){
+	
 }
 
 void print_tecnicofs_tree(FILE * fp, tecnicofs *fs){
