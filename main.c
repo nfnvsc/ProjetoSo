@@ -2,13 +2,12 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <string.h>
-#include <ctype.h>
-#include <time.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <semaphore.h>
 #include <sys/time.h>
 #include <sys/socket.h>
+
 #include "fs.h"
 #include "tecnicofs-api-constants.h"
 #include "tecnicofs-client-api.h"
@@ -145,28 +144,23 @@ void *processInput(void *fileName){
 */
 
 void *applyCommands(char *line, int user){ 	
-    char token;
-    char fileName[MAX_INPUT_SIZE];
-    char new_name[MAX_INPUT_SIZE];
-	//sscanf(inputCommands[(consptr++) % MAX_COMMANDS], "%c %s %s %s %s", &token, fileName, arg1, arg2, ar3);
+    char token, arg1[MAX_INPUT_SIZE], arg2[MAX_INPUT_SIZE];
 
-    int searchResult;
+    int permissions;
+
+    sscanf(line, "%c %s %s", &token, arg1, arg2);
+
     switch (token)   {
         case 'c':
-            //create(fs, fileName, user, arg1, arg2);
-            break;
-        case 'l':
-            searchResult = lookup(fs, fileName);
-            if(!searchResult)
-                printf("%s not found\n", fileName);
-            else
-                printf("%s found with inumber %d\n", fileName, searchResult);
+            permissions = atoi(arg2); /*permissions = ab --> a = ownerpermissions
+                                                                 b = othersPermissions*/
+            create(fs, arg1, user, permissions / 10, permissions % 10); //arg1 = filename
             break;
         case 'd':
-            //delete(fs, fileName, user);
+            delete(fs, arg1, user); //arg1 = filename
             break;
         case 'r':
-            //renameFile(fs, fileName, new_name, user);
+            renameFile(fs, arg1, arg2, user);   //arg1 = filenameOld, arg2 = filenameNew
             break;
         default: { /* error */
             fprintf(stderr, "Error: command to apply\n");    
@@ -244,17 +238,24 @@ void init_mutex_sem(){
 }
 
 void *str_echo(void *sockfd){
-    int n;
+    int n, len;
     char line[MAX_INPUT_SIZE];
-    //char output[MAX_INPUT_SIZE];
+    char output[MAX_INPUT_SIZE];
 
     for (;;){
         /* Lê uma linha do socket */
         n = read(*(int*)sockfd, line, MAX_INPUT_SIZE);
         if (n == 0) return NULL;
         else if (n < 0) perror("str_echo: readline error");
-        //else output = applyCommands(line. *(int*)sockfd);
+        else{
+            struct ucred ucred;
+            len = sizeof(struct ucred);
 
+            if (getsockopt(*(int*)sockfd, SOL_SOCKET, SO_PEERCRED, &ucred, &len) == -1){
+                perror("str_echo: getUID error");
+            }
+            output = applyCommands(line, ucred.pid);
+        }
         /*Reenvia a linha para o socket. n conta com o \0 da string,
         caso contrário perdia-se sempre um caracter!*/
         if(write(*(int*)sockfd, line, n) != n)
