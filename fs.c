@@ -253,25 +253,35 @@ int openFile(tecnicofs *fs,open_file* open_file_table ,char* filename, int mode,
 	if(check_perms(user, mode, inumber) == 0) return 0; //ERRO USER NAO TEM PERM
 
 	return open(open_file_table, inumber, mode);
-
-	
-
-
-
-
-
 }
 
 int closeFile(open_file* open_file_table, int fd){
+	return close_open_file(open_file_table, fd);
+}
+
+int readFile(tecnicofs *fs,open_file* open_file_table ,int fd, char* buffer, int len){
+	int mode, inumber;
+
+	if(get_info(open_file_table, fd, &mode, &inumber) == 1) return 0;  //ERRO FICHEIRO NAO VALIDO
+	
+	if(mode != 2 && mode != 3) return 0; //ERRO FICHEIRO NAO ESTA ABERTO NO MODO CERTO
+	
+	if(inode_get(inumber, NULL, NULL, NULL, buffer, len) == -1); //erro qualquer
+
+	return 0;
 	
 }
 
-int readFile(tecnicofs *fs,open_file* open_file_table ,char* filename, int mode){
-	
-}
+int writeFile(tecnicofs *fs,open_file* open_file_table, int fd, char* buffer, int len){
+	int mode, inumber;
 
-int writeFile(tecnicofs *fs,open_file* open_file_table ,char* filename, int mode){
+	if(get_info(open_file_table, fd, &mode, &inumber) == 1) return 0;  //ERRO FICHEIRO NAO VALIDO
 	
+	if(mode != 1 && mode != 3) return 0; //ERRO FICHEIRO NAO ESTA ABERTO NO MODO CERTO
+	
+	if(inode_set(inumber, buffer, len) == -1); //erro qualquer
+
+	return 0;
 }
 
 void print_tecnicofs_tree(FILE * fp, tecnicofs *fs){

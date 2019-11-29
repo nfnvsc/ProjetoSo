@@ -57,7 +57,7 @@ int open(open_file* open_file_table, int inumber, int mode){
     return free_index; //FILE IS NOW OPEN- return the fd
 }
 
-int close(open_file* open_file_table, int fd){
+int close_open_file(open_file* open_file_table, int fd){
     if(fd < 0 || fd > MAX_OPEN_FILES) return 1; //FD NOT VALID
 
     if(open_file_table[fd].inumber == -1) return 1; //FILE IS NOT OPENED
@@ -67,10 +67,15 @@ int close(open_file* open_file_table, int fd){
 
 }
 
-int get_mode(open_file* open_file_table, int fd){
-    if(fd < 0 || fd > MAX_OPEN_FILES) return 0; //FD NOT VALID
+int get_info(open_file* open_file_table, int fd, int *mode, int *inumber){
+    if(fd < 0 || fd > MAX_OPEN_FILES) return 1; //FD NOT VALID
 
-    return open_file_table[fd].mode;
+    if(mode)
+        mode = open_file_table[fd].mode;
+    if(inumber)
+        inumber = open_file_table[fd].inumber;
+
+    return 0;
 }
 
 
