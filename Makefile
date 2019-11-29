@@ -14,14 +14,14 @@ RWLOCK = -DRWLOCK
 
 all: tecnicofs-nosync tecnicofs-mutex tecnicofs-rwlock
 
-tecnicofs-nosync: lib/bst.o lib/inodes.o fs.o-nosync main.o-nosync
-	$(LD) $(CFLAGS) $(LDFLAGS) -o tecnicofs-nosync lib/bst.o lib/inodes.o lib/hash.o fs.o main.o 
+tecnicofs-nosync: lib/bst.o lib/inodes.o lib/files.o fs.o-nosync main.o-nosync
+	$(LD) $(CFLAGS) $(LDFLAGS) -o tecnicofs-nosync lib/bst.o lib/inodes.o lib/files.o lib/hash.o fs.o main.o 
 
-tecnicofs-mutex: lib/bst.o lib/inodes.o fs.o-mutex main.o-mutex
-	$(LD) $(CFLAGS) $(LDFLAGS) $(MUTEX) -o tecnicofs-mutex lib/bst.o lib/inodes.o lib/hash.o fs.o main.o 
+tecnicofs-mutex: lib/bst.o lib/inodes.o lib/files.o fs.o-mutex main.o-mutex
+	$(LD) $(CFLAGS) $(LDFLAGS) $(MUTEX) -o tecnicofs-mutex lib/bst.o lib/inodes.o lib/files.o lib/hash.o fs.o main.o 
 
-tecnicofs-rwlock: lib/bst.o lib/inodes.o fs.o-rwlock main.o-rwlock
-	$(LD) $(CFLAGS) $(LDFLAGS) $(MUTEX) -o tecnicofs-rwlock lib/bst.o lib/inodes.o lib/hash.o fs.o main.o 
+tecnicofs-rwlock: lib/bst.o lib/inodes.o lib/files.o fs.o-rwlock main.o-rwlock
+	$(LD) $(CFLAGS) $(LDFLAGS) $(MUTEX) -o tecnicofs-rwlock lib/bst.o lib/inodes.o lib/files.o lib/hash.o fs.o main.o 
 
 
 lib/bst.o: lib/bst.c lib/bst.h
@@ -32,6 +32,9 @@ lib/hash.o: lib/hash.c lib/hash.h
 
 lib/inodes.o: lib/inodes.c lib/inodes.h
 	$(CC) $(CFLAGS) -o lib/inodes.o -c lib/inodes.c
+
+lib/files.o: lib/files.c lib/files.h
+	$(CC) $(CFLAGS) -o lib/files.o -c lib/files.c
 
 #NOSYNC
 fs.o-nosync: fs.c fs.h lib/bst.h lib/hash.o lib/inodes.o
