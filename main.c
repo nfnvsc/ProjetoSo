@@ -169,6 +169,7 @@ void *str_echo(void *sockfd){
     socklen_t len;
     char line[MAX_INPUT_SIZE];
     int output;
+    char *buffer;
 
     open_file* file_table = open_file_table_init();
 
@@ -184,7 +185,8 @@ void *str_echo(void *sockfd){
             if (getsockopt(*(int*)sockfd, SOL_SOCKET, SO_PEERCRED, &ucred, &len) == -1){
                 perror("str_echo: getUID error");
             }
-            output = applyCommands(line, ucred.pid, file_table);
+            //buffer = 
+            output = applyCommands(line, ucred.pid, file_table, buffer);
         }
         /*Reenvia a linha para o socket. n conta com o \0 da string,
         caso contrário perdia-se sempre um caracter!*/
