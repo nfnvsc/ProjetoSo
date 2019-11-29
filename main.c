@@ -155,13 +155,8 @@ void *str_echo(void *sockfd){
     int n;
     socklen_t len;
     char line[MAX_INPUT_SIZE];
-<<<<<<< HEAD
     int output;
 
-=======
-    char output[MAX_INPUT_SIZE];
-    //alocar tabela de open_files
->>>>>>> e1e6ea94455d8297f2f9f39f764f78591318395c
     for (;;){
         /* Lê uma linha do socket */
         n = read(*(int*)sockfd, line, MAX_INPUT_SIZE);
