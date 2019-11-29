@@ -128,7 +128,7 @@ tecnicofs_node* get_node(tecnicofs* fs, char *name){
 }
 
 int create(tecnicofs* fs, char *name, uid_t user, permission ownerPerm, permission othersPerm){
-	if (lookup(fs, name) != 0) return 1; //ERRO JA EXISTE FICHEIRO
+	if (lookup(fs, name) != 0) return TECNICOFS_ERROR_FILE_ALREADY_EXISTS; //ERRO JA EXISTE FICHEIRO
 
 	tecnicofs_node* fs_node = get_node(fs, name);
 
@@ -145,11 +145,11 @@ int delete(tecnicofs* fs, char *name, uid_t user){
 	int inumber;
 	uid_t owner = 1;
 
-	if ((inumber = lookup(fs, name)) == 0) return 1; //ERRO NAO EXISTE FICHEIRO
+	if ((inumber = lookup(fs, name)) == 0) return TECNICOFS_ERROR_FILE_NOT_FOUND; //ERRO NAO EXISTE FICHEIRO
 
 	inode_get(inumber, &owner, NULL, NULL, NULL, 1); //get owner
 
-	if(owner != user) return 1; //ERRO FICHEIRO NAO PERTENCE AO USER
+	if(owner != user) return TECNICOFS_ERROR_PERMISSION_DENIED; //ERRO FICHEIRO NAO PERTENCE AO USER
 
 	inode_delete(inumber);
 
@@ -210,7 +210,7 @@ int renameFile(tecnicofs *fs, char* name, char* new_name, uid_t user){
 		uid_t owner = 1;
 
 		inode_get(inumber, &owner, NULL, NULL, NULL, 1); //get owner
-		if (user != owner) return 1; //ERRO FICHEIRO NAO PERTENCE AO USER
+		if (user != owner) return TECNICOFS_ERROR_PERMISSION_DENIED; //ERRO FICHEIRO NAO PERTENCE AO USER
 
 		if (search(node_newName->bstRoot, new_name) == NULL){
 			printf("renaming\n");
@@ -229,8 +229,14 @@ int renameFile(tecnicofs *fs, char* name, char* new_name, uid_t user){
 
 	return 0;
 }
+
+//mode: 1-write 2-read 3-write/read
+int openFile(tecnicofs *fs, char* name, int mode){
+
+
+}
+
 /*
-int openFile(tecnicofs *fs, char* name, );
 int closeFile();
 int readFile();
 int writeFile();
