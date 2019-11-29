@@ -230,18 +230,6 @@ int renameFile(tecnicofs *fs, char* name, char* new_name, uid_t user){
 	return 0;
 }
 
-//mode: 1-write 2-read 3-write/read
-int openFile(tecnicofs *fs, char* name, int mode){
-
-
-}
-
-/*
-int closeFile();
-int readFile();
-int writeFile();
-*/
-
 void print_tecnicofs_tree(FILE * fp, tecnicofs *fs){
 	int i;
 	tecnicofs_node* fs_node;
