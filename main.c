@@ -31,6 +31,9 @@ pthread_mutex_t lock_p, lock_c;
 sem_t producer;
 sem_t consumer;
 
+int sockfd, servlen;
+struct sockaddr_un serv_addr;
+
 void mutex_lock(pthread_mutex_t *lock){
     #if defined (MUTEX) || defined (RWLOCK)
     if (pthread_mutex_lock(lock)){
@@ -146,8 +149,7 @@ void *applyCommands(){
         char token;
         char name[MAX_INPUT_SIZE];
         char new_name[MAX_INPUT_SIZE];
-        int iNumber;
-
+        //int iNumber;
 
 		mutex_lock(&lock_c);
 		sscanf(inputCommands[(consptr++) % MAX_COMMANDS], "%c %s %s", &token, name, new_name);
@@ -272,8 +274,8 @@ void *str_echo(void *sockfd){
 }
 
 void mountSocket(char* socketName){
-    int servlen;
-    struct sockaddr_un serv_addr;
+    //int servlen;
+    //struct sockaddr_un serv_addr;
 
     /* Cria socket stream */
     if ((sockfd = socket(AF_UNIX,SOCK_STREAM,0) ) < 0)
@@ -296,14 +298,19 @@ void mountSocket(char* socketName){
 
 void receiveClients(){
     struct sockaddr_un cli_addr;
-    int newsockfd, i, clilen;
+    int newsockfd, i;
+    socklen_t clilen;
     pthread_t *clientThreads = malloc(MAX_INPUT_SIZE * sizeof(pthread_t));
+
     for (i = 0; i < MAX_CLIENTS; i = (i + 1) % MAX_CLIENTS){
         newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+
         if (newsockfd < 0) perror("server: accept error");
-        if (pthread_create(&clientThreads[i], NULL, str_echo, (void*) &newsockfd) != 0){
+        
+        if (pthread_create(&clientThreads[i], NULL, str_echo, (void *) &newsockfd) != 0){
             perror("Failed to create thread\n");
         }
+        
         close(newsockfd);
     }
 }
@@ -314,6 +321,7 @@ int main(int argc, char* argv[]) {
     init_mutex_sem();
     fs = new_tecnicofs(numberBuckets);
     mountSocket(argv[1]);
+    receiveClients();
 
     /*
     TIMER_READ(beginTime); start clock

@@ -130,7 +130,7 @@ int tfsRead(int fd, char *buffer, int len){
     sprintf(aux, " %d", len);
     strcat(sendline, aux);
 
-    sendMessage(sendline); //recebe string e copia para o buffer
+    sendMessage(sendline); 
 }
 
 int tfsWrite(int fd, char *buffer, int len){
@@ -138,10 +138,17 @@ int tfsWrite(int fd, char *buffer, int len){
     char aux[3];
 
     strcpy(sendline, "w ");
-    sprintf(aux, " %d ", fd);
+    sprintf(aux, " %d", fd); //fix?
     strcat(sendline, aux);
 
     strncat(sendline, buffer, len);
 
     sendMessage(sendline);
 }
+
+//TESTE
+int main(int argc, char** argv){
+    tfsMount(argv[1]);
+    tfsCreate("F1", 1, 2);
+}
+//TESTE

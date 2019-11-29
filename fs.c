@@ -143,13 +143,13 @@ int create(tecnicofs* fs, char *name, uid_t user, permission ownerPerm, permissi
 
 int delete(tecnicofs* fs, char *name, uid_t user){
 	int inumber;
-	uid_t *owner;
+	uid_t owner = 1;
 
 	if ((inumber = lookup(fs, name)) == 0) return 1; //ERRO NAO EXISTE FICHEIRO
 
-	inode_get(inumber, owner, NULL, NULL, NULL, 1); //get owner
+	inode_get(inumber, &owner, NULL, NULL, NULL, 1); //get owner
 
-	if(*owner != user) return 1; //ERRO FICHEIRO NAO PERTENCE AO USER
+	if(owner != user) return 1; //ERRO FICHEIRO NAO PERTENCE AO USER
 
 	inode_delete(inumber);
 
@@ -207,10 +207,10 @@ int renameFile(tecnicofs *fs, char* name, char* new_name, uid_t user){
 	
 	if (searchNode != NULL){
 		int inumber = searchNode->inumber;
-		uid_t *owner;
+		uid_t owner = 1;
 
-		inode_get(inumber, owner, NULL, NULL, NULL, 1); //get owner
-		if (user != *owner) return 1; //ERRO FICHEIRO NAO PERTENCE AO USER
+		inode_get(inumber, &owner, NULL, NULL, NULL, 1); //get owner
+		if (user != owner) return 1; //ERRO FICHEIRO NAO PERTENCE AO USER
 
 		if (search(node_newName->bstRoot, new_name) == NULL){
 			printf("renaming\n");
