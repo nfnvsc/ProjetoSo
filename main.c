@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include "lib/files.h"
 #include "fs.h"
 
 #define MAX_COMMANDS 10
@@ -92,7 +93,7 @@ void errorParse(){
     fprintf(stderr, "Error: command invalid\n");    
 }
 
-int applyCommands(char *line, int user){ 	
+int applyCommands(char *line, int user, open_file* file_table, char* buffer){ 	
     char token, arg1[MAX_INPUT_SIZE], arg2[MAX_INPUT_SIZE];
 
     int permissions;
@@ -112,6 +113,18 @@ int applyCommands(char *line, int user){
         case 'r':
             return renameFile(fs, arg1, arg2, user);   //arg1 = filenameOld, arg2 = filenameNew
             break;
+        case 'o':
+            return openFile(fs, file_table, arg1, atoi(arg2), user);   //arg1 = filenameOld, arg2 = filenameNew
+            break;
+        case 'x':
+            return closeFile(file_table, atoi(arg1));   //arg1 = filenameOld, arg2 = filenameNew
+            break;
+        case 'l':
+            return readFile(fs, file_table, atoi(arg1), buffer, atoi(arg2));   //arg1 = filenameOld, arg2 = filenameNew
+            break;
+        case 'w':
+            return writeFileContents(fs, file_table, atoi(arg1), arg2, strlen(arg2));   //arg1 = filenameOld, arg2 = filenameNew
+            break;
         default: { /* error */
             fprintf(stderr, "Error: command to apply\n");    
             exit(EXIT_FAILURE);      
@@ -119,7 +132,7 @@ int applyCommands(char *line, int user){
     }	
 }
 
-void writeFile(char* fileName){
+void write_output_file(char* fileName){
     FILE *outputFile;
 
     outputFile = fopen(fileName ,"w");
@@ -157,6 +170,8 @@ void *str_echo(void *sockfd){
     char line[MAX_INPUT_SIZE];
     int output;
 
+    open_file* file_table = open_file_table_init();
+
     for (;;){
         /* Lê uma linha do socket */
         n = read(*(int*)sockfd, line, MAX_INPUT_SIZE);
@@ -169,7 +184,7 @@ void *str_echo(void *sockfd){
             if (getsockopt(*(int*)sockfd, SOL_SOCKET, SO_PEERCRED, &ucred, &len) == -1){
                 perror("str_echo: getUID error");
             }
-            output = applyCommands(line, ucred.pid);
+            output = applyCommands(line, ucred.pid, file_table);
         }
         /*Reenvia a linha para o socket. n conta com o \0 da string,
         caso contrário perdia-se sempre um caracter!*/
@@ -235,7 +250,7 @@ int main(int argc, char* argv[]) {
     TIMER_READ(endTime); start clock
     printf("TecnicoFS completed in %0.4f seconds.\n", TIMER_DIFF_SECONDS(beginTime, endTime));
     */
-    writeFile(argv[2]);
+    write_output_file(argv[2]);
     mutex_destroy_sem();
     free_tecnicofs(fs);
     exit(EXIT_SUCCESS);

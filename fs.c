@@ -272,7 +272,7 @@ int readFile(tecnicofs *fs,open_file* open_file_table ,int fd, char* buffer, int
 	
 }
 
-int writeFile(tecnicofs *fs,open_file* open_file_table, int fd, char* buffer, int len){
+int writeFileContents(tecnicofs *fs,open_file* open_file_table, int fd, char* buffer, int len){
 	int mode, inumber;
 
 	if(get_info(open_file_table, fd, &mode, &inumber) == 1) return 0;  //ERRO FICHEIRO NAO VALIDO

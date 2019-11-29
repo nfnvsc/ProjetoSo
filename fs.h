@@ -33,9 +33,10 @@ void thread_fs_lock(tecnicofs_node* fs_node, int n);
 void thread_fs_unlock(tecnicofs_node* fs_node);
 void init_lock(tecnicofs_node* fs_node);
 void destroy_lock(tecnicofs_node* fs_node);
+
 int openFile(tecnicofs *fs,open_file* open_file_table ,char* filename, int mode, uid_t user);
 int closeFile(open_file* open_file_table, int fd);
-int readFile(tecnicofs *fs,open_file* open_file_table ,int fd, char* buffer, int len);
-int writeFile(tecnicofs *fs,open_file* open_file_table, int fd, char* buffer, int len);
+int readFile(tecnicofs *fs, open_file* open_file_table ,int fd, char* buffer, int len);
+int writeFileContents(tecnicofs *fs,open_file* open_file_table, int fd, char* buffer, int len);
 
 #endif /* FS_H */
