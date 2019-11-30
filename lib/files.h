@@ -7,13 +7,13 @@ typedef struct open_file {
     int mode;
 } open_file;
 
-int open(open_file* open_file_table, int inumber, int mode);
-int close_open_file(open_file* open_file_table, int fd);
 open_file* open_file_table_init();
+int open_file_open(open_file* open_file_table, int inumber, int mode);
+int open_file_close(open_file* open_file_table, int fd);
 void open_file_table_destroy(open_file* open_file_table);
 int get_free_index(open_file* open_file_table);
-int lookup_open_file_table(open_file* open_file_table, int inumber);
-int get_info(open_file* open_file_table, int fd, int *mode, int *inumber);
+int open_file_lookup(open_file* open_file_table, int inumber);
+int open_file_get(open_file* open_file_table, int fd, int *mode, int *inumber);
 
 
 

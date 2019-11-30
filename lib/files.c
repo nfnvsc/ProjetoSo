@@ -36,7 +36,7 @@ int get_free_index(open_file* open_file_table){
 }
 
 //1-found file 0-file not found
-int lookup_open_file_table(open_file* open_file_table, int inumber){
+int open_file_lookup(open_file* open_file_table, int inumber){
     int i;
     for(i = 0; i<MAX_OPEN_FILES; i++){
         if(open_file_table[i].inumber == inumber) return 1;
@@ -44,10 +44,10 @@ int lookup_open_file_table(open_file* open_file_table, int inumber){
     return 0;
 }
 
-int open(open_file* open_file_table, int inumber, int mode){
+int open_file_open(open_file* open_file_table, int inumber, int mode){
     int free_index;
 
-    if(lookup_open_file_table(open_file_table, inumber)) return -1; //FILE IS ALREADY OPENED
+    if(open_file_lookup(open_file_table, inumber)) return -1; //FILE IS ALREADY OPENED
 
     if((free_index = get_free_index(open_file_table)) == -1) return -2; //OPEN_FILE_TABLE IS FULL OF OPENED FILES
 
@@ -57,7 +57,7 @@ int open(open_file* open_file_table, int inumber, int mode){
     return free_index; //FILE IS NOW OPEN- return the fd
 }
 
-int close_open_file(open_file* open_file_table, int fd){
+int open_file_close(open_file* open_file_table, int fd){
     printf("fd?\n");
     if(fd < 0 || fd > MAX_OPEN_FILES) return -1; //FD NOT VALID
     printf("openn?\n");
@@ -69,7 +69,7 @@ int close_open_file(open_file* open_file_table, int fd){
     return 0;
 }
 
-int get_info(open_file* open_file_table, int fd, int *mode, int *inumber){
+int open_file_get(open_file* open_file_table, int fd, int *mode, int *inumber){
     if(fd < 0 || fd > MAX_OPEN_FILES) return -1; //FD NOT VALID
 
     if(mode)

@@ -131,6 +131,7 @@ void applyCommands(char *line, int user, open_file* file_table, char* buffer){
             wr_int(buffer, return_val);
             break;
         case 'l':
+            printf("here");
             return_val = readFile(fs, file_table, atoi(arg1), aux, atoi(arg2));   //arg1 = filenameOld, arg2 = filenameNew
             wr_int(buffer, return_val);
 
@@ -197,10 +198,12 @@ void *str_echo(void *sockfd){
     for (;;){
         /* Lê uma linha do socket */
         n = read(*(int*)sockfd, line, MAX_INPUT_SIZE);
-        //printf("\nRECEIVED: %s\n", line);
         if (n == 0) return NULL;
         else if (n < 0) perror("str_echo: readline error");
         else{
+            line[n] = '\0';
+            printf("\nRECEIVED: %s\n", line);
+
             struct ucred ucred;
             len = sizeof(struct ucred);
 

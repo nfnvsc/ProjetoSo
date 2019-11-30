@@ -149,7 +149,7 @@ int delete(tecnicofs* fs, open_file *open_file_table, char *name, uid_t user){
 	inode_get(inumber, &owner, NULL, NULL, NULL, 1); //get owner
 
 	if(owner != user) return TECNICOFS_ERROR_PERMISSION_DENIED; //ERRO FICHEIRO NAO PERTENCE AO USER
-	if(lookup_open_file_table(open_file_table, inumber)) return TECNICOFS_ERROR_FILE_IS_OPEN;
+	if(open_file_lookup(open_file_table, inumber)) return TECNICOFS_ERROR_FILE_IS_OPEN;
 	inode_delete(inumber);
 
 	tecnicofs_node* fs_node = get_node(fs, name);
@@ -251,7 +251,7 @@ int openFile(tecnicofs *fs,open_file* open_file_table ,char* filename, int mode,
 	
 	if(check_perms(user, mode, inumber) == -1) return TECNICOFS_ERROR_PERMISSION_DENIED;
 	
-	if((output = open(open_file_table, inumber, mode)) == -1) return TECNICOFS_ERROR_FILE_IS_OPEN; 
+	if((output = open_file_open(open_file_table, inumber, mode)) == -1) return TECNICOFS_ERROR_FILE_IS_OPEN; 
 	if(output == -2) return TECNICOFS_ERROR_MAXED_OPEN_FILES;
 	
 	return output;
@@ -259,27 +259,27 @@ int openFile(tecnicofs *fs,open_file* open_file_table ,char* filename, int mode,
 
 int closeFile(open_file* open_file_table, int fd){
 	printf("closing\n");
-	if (close_open_file(open_file_table, fd) == -1) return TECNICOFS_ERROR_FILE_NOT_OPEN;
+	if (open_file_close(open_file_table, fd) == -1) return TECNICOFS_ERROR_FILE_NOT_OPEN;
 	return 0;
 }
 
 int readFile(tecnicofs *fs,open_file* open_file_table ,int fd, char* buffer, int len){
-	int mode, inumber;
-
-	if(get_info(open_file_table, fd, &mode, &inumber) == -1) return TECNICOFS_ERROR_FILE_NOT_FOUND;
+	int mode, inumber, read_len;
+	printf("here");
+	if(open_file_get(open_file_table, fd, &mode, &inumber) == -1) return TECNICOFS_ERROR_FILE_NOT_FOUND;
 
 	if(mode != 2 && mode != 3) return TECNICOFS_ERROR_FILE_NOT_OPEN; 
 	
-	if(inode_get(inumber, NULL, NULL, NULL, buffer, len) == -1) return TECNICOFS_ERROR_OTHER; 
-
-	return 0;
+	if((read_len = inode_get(inumber, NULL, NULL, NULL, buffer, len)) == -1) return TECNICOFS_ERROR_OTHER; 
+	printf("LEN: %d\n", read_len);
+	return read_len;
 	
 }
 
 int writeFileContents(tecnicofs *fs,open_file* open_file_table, int fd, char* buffer, int len){
 	int mode, inumber;
 
-	if(get_info(open_file_table, fd, &mode, &inumber) == -1) return TECNICOFS_ERROR_FILE_NOT_FOUND;  //ERRO FICHEIRO NAO VALIDO
+	if(open_file_get(open_file_table, fd, &mode, &inumber) == -1) return TECNICOFS_ERROR_FILE_NOT_FOUND;  //ERRO FICHEIRO NAO VALIDO
 	
 	if(mode != 1 && mode != 3) return TECNICOFS_ERROR_INVALID_MODE; //ERRO FICHEIRO NAO ESTA ABERTO NO MODO CERTO
 	
