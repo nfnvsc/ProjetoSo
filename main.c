@@ -104,8 +104,8 @@ void applyCommands(char *line, int user, open_file* file_table, char* buffer){
     char aux[MAX_INPUT_SIZE];
     int permissions, return_val;
 
-    sscanf(line, "%c %s %s", &token, arg1, arg2);
-    printf("BUFFER AC_IN: %s\n", buffer);
+    sscanf(line, "%c %s %[^\t\n]", &token, arg1, arg2);
+    //printf("BUFFER AC_IN: %s\n", buffer);
     switch (token)   {
         case 'c':
             permissions = atoi(arg2); /*permissions = (int) ab
@@ -123,7 +123,7 @@ void applyCommands(char *line, int user, open_file* file_table, char* buffer){
             wr_int(buffer, return_val);
             break;
         case 'o':
-            return_val = openFile(fs, file_table, arg1, atoi(arg2), user);   //arg1 = filenameOld, arg2 = filenameNew
+            return_val = openFile(fs, file_table, arg1, atoi(arg2)/10, user);   //arg1 = filenameOld, arg2 = filenameNew
             wr_int(buffer, return_val);
             break;
         case 'x':
@@ -131,13 +131,17 @@ void applyCommands(char *line, int user, open_file* file_table, char* buffer){
             wr_int(buffer, return_val);
             break;
         case 'l':
-            printf("READ_BEFORE: %s\n", aux);
             return_val = readFile(fs, file_table, atoi(arg1), aux, atoi(arg2));   //arg1 = filenameOld, arg2 = filenameNew
-            printf("READ_AFTER: %s\n", aux);
             wr_int(buffer, return_val);
-            strcat(buffer, aux);
+
+            if (return_val == 0){ //if succesful
+                strcat(buffer, " ");
+                strcat(buffer, aux);
+            }
+
             break;
         case 'w':
+            printf("ARG2: %s %ld\n", arg2, strlen(arg2)); //ARG2 NAO CONTEM TUDO
             return_val = writeFileContents(fs, file_table, atoi(arg1), arg2, strlen(arg2));   //arg1 = filenameOld, arg2 = filenameNew
             wr_int(buffer, return_val);
             break;
@@ -146,7 +150,7 @@ void applyCommands(char *line, int user, open_file* file_table, char* buffer){
             exit(EXIT_FAILURE);      
         }
     }	
-    printf("BUFFER AC_OUT: %s\n", buffer);
+    //printf("BUFFER AC_OUT: %s\n", buffer);
 
 }
 
@@ -193,6 +197,7 @@ void *str_echo(void *sockfd){
     for (;;){
         /* Lê uma linha do socket */
         n = read(*(int*)sockfd, line, MAX_INPUT_SIZE);
+        printf("\nRECEIVED: %s\n", line);
         if (n == 0) return NULL;
         else if (n < 0) perror("str_echo: readline error");
         else{
@@ -211,7 +216,6 @@ void *str_echo(void *sockfd){
         caso contrário perdia-se sempre um caracter!*/
         if(write(*(int*)sockfd, &buffer, n) != n)
             perror("str_echo:write error");
-        printf("%s\n", line);
     }
 }
 

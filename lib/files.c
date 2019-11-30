@@ -73,9 +73,9 @@ int get_info(open_file* open_file_table, int fd, int *mode, int *inumber){
     if(fd < 0 || fd > MAX_OPEN_FILES) return -1; //FD NOT VALID
 
     if(mode)
-        mode = &open_file_table[fd].mode;
+        *mode = open_file_table[fd].mode;
     if(inumber)
-        inumber = &open_file_table[fd].inumber;
+        *inumber = open_file_table[fd].inumber;
 
     return 0;
 }

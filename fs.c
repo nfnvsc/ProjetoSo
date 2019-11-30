@@ -133,7 +133,6 @@ int create(tecnicofs* fs, char *name, uid_t user, permission ownerPerm, permissi
 	tecnicofs_node* fs_node = get_node(fs, name);
 
 	int inumber = inode_create(user, ownerPerm, othersPerm);
-	printf("INUMBER: %d\n", inumber);
 	thread_fs_lock(fs_node, 1);
 	fs_node->bstRoot = insert(fs_node->bstRoot, name, inumber);
 	thread_fs_unlock(fs_node);
@@ -249,7 +248,7 @@ int openFile(tecnicofs *fs,open_file* open_file_table ,char* filename, int mode,
 	int inumber, output;
 
 	if((inumber = lookup(fs, filename)) == -1) return TECNICOFS_ERROR_FILE_NOT_FOUND; 
-
+	
 	if(check_perms(user, mode, inumber) == -1) return TECNICOFS_ERROR_PERMISSION_DENIED;
 	
 	if((output = open(open_file_table, inumber, mode)) == -1) return TECNICOFS_ERROR_FILE_IS_OPEN; 
@@ -268,7 +267,7 @@ int readFile(tecnicofs *fs,open_file* open_file_table ,int fd, char* buffer, int
 	int mode, inumber;
 
 	if(get_info(open_file_table, fd, &mode, &inumber) == -1) return TECNICOFS_ERROR_FILE_NOT_FOUND;
-	
+
 	if(mode != 2 && mode != 3) return TECNICOFS_ERROR_FILE_NOT_OPEN; 
 	
 	if(inode_get(inumber, NULL, NULL, NULL, buffer, len) == -1) return TECNICOFS_ERROR_OTHER; 

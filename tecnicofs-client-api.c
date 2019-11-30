@@ -6,6 +6,9 @@
 int sockfd, servlen;
 struct sockaddr_un serv_addr;
 
+char sendline[MAXLINE];
+char recvline[MAXLINE];
+
 int tfsMount(char *adress){
 
     /* Cria socket stream */
@@ -35,14 +38,15 @@ int tfsUnmount(){
     exit(0);
 }
 
-int sendMessage(char* sendline){
+int sendMessage(){
     int n;
-    char recvline[MAXLINE+1];
+    //char recvline[MAXLINE+1];
 
     /* Envia string para sockfd.
     Note-se que o \0 não é enviado */
     n = strlen(sendline);
 
+    printf("LINE: %s\n", sendline);
 
     if (write(sockfd, sendline, n) != n){
         perror("str_cli:write error on socket");
@@ -58,7 +62,6 @@ int sendMessage(char* sendline){
 }
 
 int tfsCreate(char *filename, permission ownerPermissions, permission othersPermissions){
-    char sendline[MAXLINE];
     char aux[3];
 
     strcpy(sendline, "c ");
@@ -70,32 +73,29 @@ int tfsCreate(char *filename, permission ownerPermissions, permission othersPerm
     sprintf(aux, "%d", (int)othersPermissions);
     strcat(sendline, aux);
 
-    return sendMessage(sendline);
+    return sendMessage();
     
 }
 
 int tfsDelete(char *filename){
-    char sendline[MAXLINE];
 
     strcpy(sendline, "d ");
     strcat(sendline, filename);
 
-    return sendMessage(sendline);
+    return sendMessage();
 }
 
 int tfsRename(char *filenameOld, char *filenameNew){
-    char sendline[MAXLINE];
 
     strcpy(sendline, "r ");
     strcat(sendline, filenameOld);
     strcat(sendline, " ");
     strcat(sendline, filenameNew);
 
-    return sendMessage(sendline);
+    return sendMessage();
 }
 
 int tfsOpen(char *filename, permission mode){
-    char sendline[MAXLINE];
     char aux[3];
 
     strcpy(sendline, "o ");
@@ -105,44 +105,46 @@ int tfsOpen(char *filename, permission mode){
     sprintf(aux, " %d", (int)mode);
     strcat(sendline, aux);
 
-    return sendMessage(sendline);
+    return sendMessage();
 }
 
 int tfsClose(int fd){
-    char sendline[MAXLINE];
     char aux[3];
 
     strcpy(sendline, "x ");
     sprintf(aux, "%d", fd);
     strcat(sendline, aux);
 
-    return sendMessage(sendline);
+    return sendMessage();
 }
 
 int tfsRead(int fd, char *buffer, int len){
-    char sendline[MAXLINE];
     char aux[3];
+    int output;
 
     strcpy(sendline, "l ");
-    sprintf(aux, " %d", fd);
+    sprintf(aux, "%d", fd);
     strcat(sendline, aux);
-    sprintf(aux, " %d", len);
+    strcat(sendline, " ");
+    sprintf(aux, "%d", len);
     strcat(sendline, aux);
+    strcpy(buffer, &aux[0]);
+    output = sendMessage();
+    strncpy(buffer, recvline + 2, strlen(recvline)-1);
 
-    return sendMessage(sendline); 
+    return output;
 }
 
 int tfsWrite(int fd, char *buffer, int len){
-    char sendline[MAXLINE];
     char aux[3];
 
     strcpy(sendline, "w ");
-    sprintf(aux, " %d", fd); //fix?
+    sprintf(aux, "%d", fd);
     strcat(sendline, aux);
-
+    strcat(sendline, " ");
     strncat(sendline, buffer, len);
 
-    return sendMessage(sendline);
+    return sendMessage();
 }
 
 //TESTE
@@ -151,41 +153,14 @@ int main(int argc, char** argv){
         printf("Usage: %s sock_path\n", argv[0]);
         exit(0);
     }
-    char readBuffer[10] = {0};
-    assert(tfsMount(argv[1]) == 0);
-    assert(tfsCreate("abc", RW, READ) == 0);
-    int fd = -1;
-    assert((fd = tfsOpen("abc", RW)) == 0);
-    int out = tfsWrite(fd, "12345", 5);
-    printf("%d\n", out);
-    assert(out == 0);
-    
-    printf("Test: read full file content");
-    assert(tfsRead(fd, readBuffer, 6) == 5);
-    printf("Content read: %s\n", readBuffer);
-    
-    printf("Test: read only first 3 characters of file content");
-    memset(readBuffer, 0, 10*sizeof(char));
-    assert(tfsRead(fd, readBuffer, 4) == 3);
-    printf("Content read: %s\n", readBuffer);
-    
-    printf("Test: read with buffer bigger than file content");
-    memset(readBuffer, 0, 10*sizeof(char));
-    assert(tfsRead(fd, readBuffer, 10) == 5);
-    printf("Content read: %s\n", readBuffer);
-
-    assert(tfsClose(fd) == 0);
-
-    printf("Test: read closed file");
-    assert(tfsRead(fd, readBuffer, 6) == TECNICOFS_ERROR_FILE_NOT_OPEN);
-
-    printf("Test: read file open in write mode");
-    assert((fd = tfsOpen("abc", WRITE)) == 0);
-    assert(tfsRead(fd, readBuffer, 6) == TECNICOFS_ERROR_INVALID_MODE);
-
-
-    assert(tfsDelete("abc") == 0);
-    assert(tfsUnmount() == 0);
+    char buffer[100];
+    char *teste = "BLA BLA BLAxx";
+    tfsMount(argv[1]);
+    tfsCreate("TESTE", 3, 3);
+    int fd = tfsOpen("TESTE", 3);
+    tfsWrite(fd, teste, strlen(teste));
+    tfsRead(fd, buffer, strlen(teste));
+    printf("%s", buffer);
 
     return 0;
 
