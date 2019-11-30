@@ -10,7 +10,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include "lib/files.h"
 #include "fs.h"
 
 #define MAX_COMMANDS 10
@@ -68,14 +67,15 @@ void mutex_destroy_sem(){
 }
 
 static void displayUsage (const char* appName){
-    printf("Usage: %s inputfile outputfile numthreads numbuckets\n", appName);
+    printf("Usage: %s socketname outputfile numbuckets\n", appName);
     
 }
 
 static void parseArgs (long argc, char* const argv[]){
-    if (argc != 4) {    //args--> tecnicofs nomesocket outputfile numbuckets
+    if (argc != 4) {
         fprintf(stderr, "Invalid format:\n");
         displayUsage(argv[0]);
+        exit(0);
     }
     numberBuckets = atoi(argv[3]);
 }       
@@ -93,43 +93,61 @@ void errorParse(){
     fprintf(stderr, "Error: command invalid\n");    
 }
 
-int applyCommands(char *line, int user, open_file* file_table, char* buffer){ 	
-    char token, arg1[MAX_INPUT_SIZE], arg2[MAX_INPUT_SIZE];
+void wr_int(char* buffer, int d){
+    char aux[2];
+    sprintf(aux, "%d", d);
+    strcpy(buffer, aux);
+}
 
-    int permissions;
+void applyCommands(char *line, int user, open_file* file_table, char* buffer){ 	
+    char token, arg1[MAX_INPUT_SIZE], arg2[MAX_INPUT_SIZE];
+    char aux[MAX_INPUT_SIZE];
+    int permissions, return_val;
 
     sscanf(line, "%c %s %s", &token, arg1, arg2);
-
+    printf("BUFFER AC_IN: %s\n", buffer);
     switch (token)   {
         case 'c':
             permissions = atoi(arg2); /*permissions = (int) ab
                                                         a = ownerpermissions                                                
                                                         b = othersPermissions*/
-            return create(fs, arg1, user, permissions / 10, permissions % 10); //arg1 = filename
+            return_val = create(fs, arg1, user, permissions / 10, permissions % 10); //arg1 = filename
+            wr_int(buffer, return_val);
             break;
         case 'd':
-            return delete(fs, arg1, user); //arg1 = filename
+            return_val = delete(fs, arg1, user); //arg1 = filename
+            wr_int(buffer, return_val);
             break;
         case 'r':
-            return renameFile(fs, arg1, arg2, user);   //arg1 = filenameOld, arg2 = filenameNew
+            return_val = renameFile(fs, arg1, arg2, user);   //arg1 = filenameOld, arg2 = filenameNew
+            wr_int(buffer, return_val);
             break;
         case 'o':
-            return openFile(fs, file_table, arg1, atoi(arg2), user);   //arg1 = filenameOld, arg2 = filenameNew
+            return_val = openFile(fs, file_table, arg1, atoi(arg2), user);   //arg1 = filenameOld, arg2 = filenameNew
+            wr_int(buffer, return_val);
             break;
         case 'x':
-            return closeFile(file_table, atoi(arg1));   //arg1 = filenameOld, arg2 = filenameNew
+            return_val = closeFile(file_table, atoi(arg1));   //arg1 = filenameOld, arg2 = filenameNew
+            wr_int(buffer, return_val);
             break;
         case 'l':
-            return readFile(fs, file_table, atoi(arg1), buffer, atoi(arg2));   //arg1 = filenameOld, arg2 = filenameNew
+            printf("READ_BEFORE: %s\n", aux);
+            return_val = readFile(fs, file_table, atoi(arg1), aux, atoi(arg2));   //arg1 = filenameOld, arg2 = filenameNew
+            printf("READ_AFTER: %s\n", aux);
+            wr_int(buffer, return_val);
+            strcat(buffer, aux);
             break;
         case 'w':
-            return writeFileContents(fs, file_table, atoi(arg1), arg2, strlen(arg2));   //arg1 = filenameOld, arg2 = filenameNew
+            return_val = writeFileContents(fs, file_table, atoi(arg1), arg2, strlen(arg2));   //arg1 = filenameOld, arg2 = filenameNew
+            wr_int(buffer, return_val);
             break;
         default: { /* error */
             fprintf(stderr, "Error: command to apply\n");    
             exit(EXIT_FAILURE);      
         }
     }	
+    printf("BUFFER AC_OUT: %s\n", buffer);
+
 }
 
 void write_output_file(char* fileName){
@@ -168,10 +186,9 @@ void *str_echo(void *sockfd){
     int n;
     socklen_t len;
     char line[MAX_INPUT_SIZE];
-    int output;
-    char *buffer;
+    char buffer[MAX_INPUT_SIZE]; //max input size?
 
-    open_file* file_table = open_file_table_init();
+    open_file* file_table = init_open_file_table();
 
     for (;;){
         /* Lê uma linha do socket */
@@ -186,11 +203,13 @@ void *str_echo(void *sockfd){
                 perror("str_echo: getUID error");
             }
             //buffer = 
-            output = applyCommands(line, ucred.pid, file_table, buffer);
+            applyCommands(line, ucred.pid, file_table, buffer);
+            n = strlen(buffer);
         }
+        printf("BUFFER_STR_ECHO:%s\n",buffer);
         /*Reenvia a linha para o socket. n conta com o \0 da string,
         caso contrário perdia-se sempre um caracter!*/
-        if(write(*(int*)sockfd, &output, n) != n)
+        if(write(*(int*)sockfd, &buffer, n) != n)
             perror("str_echo:write error");
         printf("%s\n", line);
     }

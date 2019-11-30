@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <files.h>
 
 tecnicofs* new_tecnicofs(int numberBuckets){
 	int i;
@@ -129,16 +128,16 @@ tecnicofs_node* get_node(tecnicofs* fs, char *name){
 }
 
 int create(tecnicofs* fs, char *name, uid_t user, permission ownerPerm, permission othersPerm){
-	if (lookup(fs, name) != 0) return TECNICOFS_ERROR_FILE_ALREADY_EXISTS; //ERRO JA EXISTE FICHEIRO
+	if (lookup(fs, name) != -1) return TECNICOFS_ERROR_FILE_ALREADY_EXISTS; //ERRO JA EXISTE FICHEIRO
 
 	tecnicofs_node* fs_node = get_node(fs, name);
 
 	int inumber = inode_create(user, ownerPerm, othersPerm);
-
+	printf("INUMBER: %d\n", inumber);
 	thread_fs_lock(fs_node, 1);
 	fs_node->bstRoot = insert(fs_node->bstRoot, name, inumber);
 	thread_fs_unlock(fs_node);
-
+	
 	return 0;
 }
 
@@ -146,7 +145,7 @@ int delete(tecnicofs* fs, char *name, uid_t user){
 	int inumber;
 	uid_t owner = 1;
 
-	if ((inumber = lookup(fs, name)) == 0) return TECNICOFS_ERROR_FILE_NOT_FOUND; //ERRO NAO EXISTE FICHEIRO
+	if ((inumber = lookup(fs, name)) == -1) return TECNICOFS_ERROR_FILE_NOT_FOUND; //ERRO NAO EXISTE FICHEIRO
 
 	inode_get(inumber, &owner, NULL, NULL, NULL, 1); //get owner
 
@@ -172,7 +171,7 @@ int lookup(tecnicofs* fs, char *name){
 	thread_fs_unlock(fs_node);
 
 	if ( searchNode ) return searchNode->inumber;
-	return 0;
+	return -1;
 }
 
 int tryLockBoth(tecnicofs_node* node1, tecnicofs_node* node2, int numberAttempts){
@@ -233,40 +232,45 @@ int renameFile(tecnicofs *fs, char* name, char* new_name, uid_t user){
 
 int check_perms(uid_t user, int mode, int inumber){
 	uid_t owner = 1;
-	int ownerPerm, othersPerm;
+	permission ownerPerm, othersPerm;
 	inode_get(inumber, &owner, &ownerPerm, &othersPerm, NULL, 1); //get owner
-
-	if(user==owner) 
-		if(ownerPerm != mode && ownerPerm != 3) return 0; //ERRO USER NAO TEM PERMISSOES
-	else
-		if(othersPerm != mode && othersPerm != 3) return 0; //ERRO USER NAO TEM PERMISSOES
 	
-	return 1;
+	if(user==owner){
+		if(ownerPerm != mode && ownerPerm != 3) return -1;
+	} 
+	else
+		if(othersPerm != mode && othersPerm != 3) return -1;
+	
+	return 0;
 	
 }
 //perms 0-none 1-wronly 2-rdonly 3-rdwr
 int openFile(tecnicofs *fs,open_file* open_file_table ,char* filename, int mode, uid_t user){
-	int inumber;
+	int inumber, output;
 
-	if((inumber = lookup(fs, filename)) == 0) return 0; //ERRO FICHEIRO NAO EXISTE
+	if((inumber = lookup(fs, filename)) == -1) return TECNICOFS_ERROR_FILE_NOT_FOUND; 
 
-	if(check_perms(user, mode, inumber) == 0) return 0; //ERRO USER NAO TEM PERM
-
-	return open(open_file_table, inumber, mode);
+	if(check_perms(user, mode, inumber) == -1) return TECNICOFS_ERROR_PERMISSION_DENIED;
+	
+	if((output = open(open_file_table, inumber, mode)) == -1) return TECNICOFS_ERROR_FILE_IS_OPEN; 
+	if(output == -2) return TECNICOFS_ERROR_MAXED_OPEN_FILES;
+	
+	return output;
 }
 
 int closeFile(open_file* open_file_table, int fd){
-	return close_open_file(open_file_table, fd);
+	if (close_open_file(open_file_table, fd) == -1) return TECNICOFS_ERROR_FILE_NOT_OPEN;
+	return 0;
 }
 
 int readFile(tecnicofs *fs,open_file* open_file_table ,int fd, char* buffer, int len){
 	int mode, inumber;
 
-	if(get_info(open_file_table, fd, &mode, &inumber) == 1) return 0;  //ERRO FICHEIRO NAO VALIDO
+	if(get_info(open_file_table, fd, &mode, &inumber) == -1) return TECNICOFS_ERROR_FILE_NOT_FOUND;
 	
-	if(mode != 2 && mode != 3) return 0; //ERRO FICHEIRO NAO ESTA ABERTO NO MODO CERTO
+	if(mode != 2 && mode != 3) return TECNICOFS_ERROR_FILE_NOT_OPEN; 
 	
-	if(inode_get(inumber, NULL, NULL, NULL, buffer, len) == -1); //erro qualquer
+	if(inode_get(inumber, NULL, NULL, NULL, buffer, len) == -1) return TECNICOFS_ERROR_OTHER; 
 
 	return 0;
 	
@@ -275,13 +279,17 @@ int readFile(tecnicofs *fs,open_file* open_file_table ,int fd, char* buffer, int
 int writeFileContents(tecnicofs *fs,open_file* open_file_table, int fd, char* buffer, int len){
 	int mode, inumber;
 
-	if(get_info(open_file_table, fd, &mode, &inumber) == 1) return 0;  //ERRO FICHEIRO NAO VALIDO
+	if(get_info(open_file_table, fd, &mode, &inumber) == -1) return TECNICOFS_ERROR_FILE_NOT_FOUND;  //ERRO FICHEIRO NAO VALIDO
 	
-	if(mode != 1 && mode != 3) return 0; //ERRO FICHEIRO NAO ESTA ABERTO NO MODO CERTO
+	if(mode != 1 && mode != 3) return TECNICOFS_ERROR_INVALID_MODE; //ERRO FICHEIRO NAO ESTA ABERTO NO MODO CERTO
 	
-	if(inode_set(inumber, buffer, len) == -1); //erro qualquer
+	if(inode_set(inumber, buffer, len) == -1) return TECNICOFS_ERROR_OTHER; //erro qualquer
 
 	return 0;
+}
+
+open_file* init_open_file_table(){
+	return open_file_table_init();
 }
 
 void print_tecnicofs_tree(FILE * fp, tecnicofs *fs){

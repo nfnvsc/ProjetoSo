@@ -34,7 +34,7 @@ int tfsUnmount(){
     exit(0);
 }
 
-void sendMessage(char* sendline){
+int sendMessage(char* sendline){
     int n, error;
     char recvline[MAXLINE+1];
 
@@ -56,7 +56,7 @@ void sendMessage(char* sendline){
     /* Envia a string para stdout */
     fputs(recvline, stdout);
 
-    //return recvline;
+    return atoi(recvline);
 }
 
 int tfsCreate(char *filename, permission ownerPermissions, permission othersPermissions){
@@ -72,7 +72,7 @@ int tfsCreate(char *filename, permission ownerPermissions, permission othersPerm
     sprintf(aux, "%d", (int)othersPermissions);
     strcat(sendline, aux);
 
-    sendMessage(sendline);
+    return sendMessage(sendline);
     
 }
 
@@ -82,7 +82,7 @@ int tfsDelete(char *filename){
     strcpy(sendline, "d ");
     strcat(sendline, filename);
 
-    sendMessage(sendline);
+    return sendMessage(sendline);
 }
 
 int tfsRename(char *filenameOld, char *filenameNew){
@@ -93,7 +93,7 @@ int tfsRename(char *filenameOld, char *filenameNew){
     strcat(sendline, " ");
     strcat(sendline, filenameNew);
 
-    sendMessage(sendline);
+    return sendMessage(sendline);
 }
 
 int tfsOpen(char *filename, permission mode){
@@ -107,7 +107,7 @@ int tfsOpen(char *filename, permission mode){
     sprintf(aux, " %d", (int)mode);
     strcat(sendline, aux);
 
-    sendMessage(sendline);
+    return sendMessage(sendline);
 }
 
 int tfsClose(int fd){
@@ -118,7 +118,7 @@ int tfsClose(int fd){
     sprintf(aux, " %d", fd);
     strcat(sendline, aux);
 
-    sendMessage(sendline);
+    return sendMessage(sendline);
 }
 
 int tfsRead(int fd, char *buffer, int len){
@@ -131,7 +131,7 @@ int tfsRead(int fd, char *buffer, int len){
     sprintf(aux, " %d", len);
     strcat(sendline, aux);
 
-    sendMessage(sendline); 
+    return sendMessage(sendline); 
 }
 
 int tfsWrite(int fd, char *buffer, int len){
@@ -144,15 +144,19 @@ int tfsWrite(int fd, char *buffer, int len){
 
     strncat(sendline, buffer, len);
 
-    sendMessage(sendline);
+    return sendMessage(sendline);
 }
 
 //TESTE
 int main(int argc, char** argv){
+    int fd;
+    char *buffer;
     tfsMount(argv[1]);
     tfsCreate("F1", 1, 2);
-    tfsCreate("F2", 1, 2);
-    tfsCreate("F3", 1, 2);
+    fd = tfsOpen("F1", 1);
+    tfsWrite(fd, "cagalhao", 5);
+    tfsRead(fd, buffer, 5);
+    printf("GGG WWP: %s", buffer);
     tfsUnmount();
 }
 //TESTE

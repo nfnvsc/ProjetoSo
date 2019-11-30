@@ -4,6 +4,7 @@
 #include "lib/hash.h"
 #include "lib/inodes.h"
 #include "lib/timer.h"
+#include "lib/files.h"
 #include <pthread.h>
 
 typedef struct tecnicofs_node {
@@ -33,6 +34,8 @@ void thread_fs_lock(tecnicofs_node* fs_node, int n);
 void thread_fs_unlock(tecnicofs_node* fs_node);
 void init_lock(tecnicofs_node* fs_node);
 void destroy_lock(tecnicofs_node* fs_node);
+
+open_file* init_open_file_table();
 
 int openFile(tecnicofs *fs,open_file* open_file_table ,char* filename, int mode, uid_t user);
 int closeFile(open_file* open_file_table, int fd);

@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <unistd.h> 
 
-
+int sendMessage(char* sendline);
 
 int tfsCreate(char *filename, permission ownerPermissions, permission othersPermissions);
 int tfsDelete(char *filename);
