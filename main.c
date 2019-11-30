@@ -141,7 +141,7 @@ void applyCommands(char *line, int user, open_file* file_table, char* buffer){
 
             break;
         case 'w':
-            printf("ARG2: %s %ld\n", arg2, strlen(arg2)); //ARG2 NAO CONTEM TUDO
+            printf("ARG2: %s %ld\n", arg2, strlen(arg2));
             return_val = writeFileContents(fs, file_table, atoi(arg1), arg2, strlen(arg2));   //arg1 = filenameOld, arg2 = filenameNew
             wr_int(buffer, return_val);
             break;
@@ -190,14 +190,14 @@ void *str_echo(void *sockfd){
     int n;
     socklen_t len;
     char line[MAX_INPUT_SIZE];
-    char buffer[MAX_INPUT_SIZE]; //max input size?
+    char buffer[MAX_INPUT_SIZE];
 
     open_file* file_table = init_open_file_table();
 
     for (;;){
         /* Lê uma linha do socket */
         n = read(*(int*)sockfd, line, MAX_INPUT_SIZE);
-        printf("\nRECEIVED: %s\n", line);
+        //printf("\nRECEIVED: %s\n", line);
         if (n == 0) return NULL;
         else if (n < 0) perror("str_echo: readline error");
         else{
@@ -211,7 +211,6 @@ void *str_echo(void *sockfd){
             applyCommands(line, ucred.pid, file_table, buffer);
             n = strlen(buffer);
         }
-        printf("BUFFER_STR_ECHO:%s\n",buffer);
         /*Reenvia a linha para o socket. n conta com o \0 da string,
         caso contrário perdia-se sempre um caracter!*/
         if(write(*(int*)sockfd, &buffer, n) != n)
