@@ -24,7 +24,7 @@ tecnicofs_node* get_node(tecnicofs* fs, char *name);
 
 void free_tecnicofs(tecnicofs* fs);
 int create(tecnicofs* fs, char *name, uid_t user, permission ownerPerm, permission othersPerm);
-int delete(tecnicofs* fs, char *name, uid_t user);
+int delete(tecnicofs* fs, open_file *open_file_table, char *name, uid_t user);
 int lookup(tecnicofs* fs, char *name);
 int renameFile(tecnicofs *fs, char* name, char* new_name, uid_t user);
 void print_tecnicofs_tree(FILE * fp, tecnicofs *fs);

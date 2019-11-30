@@ -1,4 +1,5 @@
 #include "tecnicofs-client-api.h"
+#include <assert.h>
 
 #define MAXLINE 128
 
@@ -35,7 +36,7 @@ int tfsUnmount(){
 }
 
 int sendMessage(char* sendline){
-    int n, error;
+    int n;
     char recvline[MAXLINE+1];
 
     /* Envia string para sockfd.
@@ -43,7 +44,7 @@ int sendMessage(char* sendline){
     n = strlen(sendline);
 
 
-    if (error = write(sockfd, sendline, n) != n){
+    if (write(sockfd, sendline, n) != n){
         perror("str_cli:write error on socket");
     }
     /* Tenta ler string de sockfd.
@@ -52,9 +53,6 @@ int sendMessage(char* sendline){
 
     if (n<0) perror("str_cli:readline error");
         recvline[n] = 0;
-
-    /* Envia a string para stdout */
-    fputs(recvline, stdout);
 
     return atoi(recvline);
 }
@@ -115,7 +113,7 @@ int tfsClose(int fd){
     char aux[3];
 
     strcpy(sendline, "x ");
-    sprintf(aux, " %d", fd);
+    sprintf(aux, "%d", fd);
     strcat(sendline, aux);
 
     return sendMessage(sendline);
@@ -149,6 +147,49 @@ int tfsWrite(int fd, char *buffer, int len){
 
 //TESTE
 int main(int argc, char** argv){
+    if (argc != 2) {
+        printf("Usage: %s sock_path\n", argv[0]);
+        exit(0);
+    }
+    char readBuffer[10] = {0};
+    assert(tfsMount(argv[1]) == 0);
+    assert(tfsCreate("abc", RW, READ) == 0);
+    int fd = -1;
+    assert((fd = tfsOpen("abc", RW)) == 0);
+    int out = tfsWrite(fd, "12345", 5);
+    printf("%d\n", out);
+    assert(out == 0);
+    
+    printf("Test: read full file content");
+    assert(tfsRead(fd, readBuffer, 6) == 5);
+    printf("Content read: %s\n", readBuffer);
+    
+    printf("Test: read only first 3 characters of file content");
+    memset(readBuffer, 0, 10*sizeof(char));
+    assert(tfsRead(fd, readBuffer, 4) == 3);
+    printf("Content read: %s\n", readBuffer);
+    
+    printf("Test: read with buffer bigger than file content");
+    memset(readBuffer, 0, 10*sizeof(char));
+    assert(tfsRead(fd, readBuffer, 10) == 5);
+    printf("Content read: %s\n", readBuffer);
+
+    assert(tfsClose(fd) == 0);
+
+    printf("Test: read closed file");
+    assert(tfsRead(fd, readBuffer, 6) == TECNICOFS_ERROR_FILE_NOT_OPEN);
+
+    printf("Test: read file open in write mode");
+    assert((fd = tfsOpen("abc", WRITE)) == 0);
+    assert(tfsRead(fd, readBuffer, 6) == TECNICOFS_ERROR_INVALID_MODE);
+
+
+    assert(tfsDelete("abc") == 0);
+    assert(tfsUnmount() == 0);
+
+    return 0;
+
+    /*
     int fd;
     char *buffer;
     tfsMount(argv[1]);
@@ -158,5 +199,6 @@ int main(int argc, char** argv){
     tfsRead(fd, buffer, 5);
     printf("GGG WWP: %s", buffer);
     tfsUnmount();
+    */
 }
 //TESTE

@@ -115,7 +115,7 @@ void applyCommands(char *line, int user, open_file* file_table, char* buffer){
             wr_int(buffer, return_val);
             break;
         case 'd':
-            return_val = delete(fs, arg1, user); //arg1 = filename
+            return_val = delete(fs, file_table, arg1, user); //arg1 = filename
             wr_int(buffer, return_val);
             break;
         case 'r':

@@ -141,7 +141,7 @@ int create(tecnicofs* fs, char *name, uid_t user, permission ownerPerm, permissi
 	return 0;
 }
 
-int delete(tecnicofs* fs, char *name, uid_t user){
+int delete(tecnicofs* fs, open_file *open_file_table, char *name, uid_t user){
 	int inumber;
 	uid_t owner = 1;
 
@@ -150,7 +150,7 @@ int delete(tecnicofs* fs, char *name, uid_t user){
 	inode_get(inumber, &owner, NULL, NULL, NULL, 1); //get owner
 
 	if(owner != user) return TECNICOFS_ERROR_PERMISSION_DENIED; //ERRO FICHEIRO NAO PERTENCE AO USER
-
+	if(lookup_open_file_table(open_file_table, inumber)) return TECNICOFS_ERROR_FILE_IS_OPEN;
 	inode_delete(inumber);
 
 	tecnicofs_node* fs_node = get_node(fs, name);
@@ -259,6 +259,7 @@ int openFile(tecnicofs *fs,open_file* open_file_table ,char* filename, int mode,
 }
 
 int closeFile(open_file* open_file_table, int fd){
+	printf("closing\n");
 	if (close_open_file(open_file_table, fd) == -1) return TECNICOFS_ERROR_FILE_NOT_OPEN;
 	return 0;
 }
