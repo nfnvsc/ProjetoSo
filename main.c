@@ -93,12 +93,6 @@ void errorParse(){
     fprintf(stderr, "Error: command invalid\n");    
 }
 
-void wr_int(char* buffer, int d){
-    char aux[2];
-    sprintf(aux, "%d", d);
-    strcpy(buffer, aux);
-}
-
 void applyCommands(char *line, int user, open_file* file_table, char* buffer){ 	
     char token, arg1[MAX_INPUT_SIZE], arg2[MAX_INPUT_SIZE];
     char aux[MAX_INPUT_SIZE];
@@ -112,39 +106,39 @@ void applyCommands(char *line, int user, open_file* file_table, char* buffer){
                                                         a = ownerpermissions                                                
                                                         b = othersPermissions*/
             return_val = create(fs, arg1, user, permissions / 10, permissions % 10); //arg1 = filename
-            wr_int(buffer, return_val);
+            sprintf(buffer, "%d", return_val);
             break;
         case 'd':
             return_val = delete(fs, file_table, arg1, user); //arg1 = filename
-            wr_int(buffer, return_val);
+            sprintf(buffer, "%d", return_val);
             break;
         case 'r':
             return_val = renameFile(fs, arg1, arg2, user);   //arg1 = filenameOld, arg2 = filenameNew
-            wr_int(buffer, return_val);
+            sprintf(buffer, "%d", return_val);
             break;
         case 'o':
-            return_val = openFile(fs, file_table, arg1, atoi(arg2)/10, user);   //arg1 = filenameOld, arg2 = filenameNew
-            wr_int(buffer, return_val);
+            return_val = openFile(fs, file_table, arg1, atoi(arg2), user);   //arg1 = filenameOld, arg2 = filenameNew
+            sprintf(buffer, "%d", return_val);
             break;
         case 'x':
             return_val = closeFile(file_table, atoi(arg1));   //arg1 = filenameOld, arg2 = filenameNew
-            wr_int(buffer, return_val);
+            sprintf(buffer, "%d", return_val);
             break;
         case 'l':
-            printf("here");
             return_val = readFile(fs, file_table, atoi(arg1), aux, atoi(arg2));   //arg1 = filenameOld, arg2 = filenameNew
-            wr_int(buffer, return_val);
-
-            if (return_val == 0){ //if succesful
-                strcat(buffer, " ");
-                strcat(buffer, aux);
+            //if succesful
+            if (return_val > 0){ 
+                sprintf(buffer, "%d %s", return_val, aux);
             }
-
+            else
+            {
+                sprintf(buffer, "%d", return_val);
+            }
             break;
         case 'w':
-            printf("ARG2: %s %ld\n", arg2, strlen(arg2));
+            //printf("ARG2: %s %ld\n", arg2, strlen(arg2));
             return_val = writeFileContents(fs, file_table, atoi(arg1), arg2, strlen(arg2));   //arg1 = filenameOld, arg2 = filenameNew
-            wr_int(buffer, return_val);
+            sprintf(buffer, "%d", return_val);
             break;
         default: { /* error */
             fprintf(stderr, "Error: command to apply\n");    

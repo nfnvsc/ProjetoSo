@@ -246,7 +246,7 @@ int check_perms(uid_t user, int mode, int inumber){
 //perms 0-none 1-wronly 2-rdonly 3-rdwr
 int openFile(tecnicofs *fs,open_file* open_file_table ,char* filename, int mode, uid_t user){
 	int inumber, output;
-
+	
 	if((inumber = lookup(fs, filename)) == -1) return TECNICOFS_ERROR_FILE_NOT_FOUND; 
 	
 	if(check_perms(user, mode, inumber) == -1) return TECNICOFS_ERROR_PERMISSION_DENIED;
@@ -265,13 +265,11 @@ int closeFile(open_file* open_file_table, int fd){
 
 int readFile(tecnicofs *fs,open_file* open_file_table ,int fd, char* buffer, int len){
 	int mode, inumber, read_len;
-	printf("here");
 	if(open_file_get(open_file_table, fd, &mode, &inumber) == -1) return TECNICOFS_ERROR_FILE_NOT_FOUND;
 
 	if(mode != 2 && mode != 3) return TECNICOFS_ERROR_FILE_NOT_OPEN; 
 	
 	if((read_len = inode_get(inumber, NULL, NULL, NULL, buffer, len)) == -1) return TECNICOFS_ERROR_OTHER; 
-	printf("LEN: %d\n", read_len);
 	return read_len;
 	
 }
@@ -280,7 +278,6 @@ int writeFileContents(tecnicofs *fs,open_file* open_file_table, int fd, char* bu
 	int mode, inumber;
 
 	if(open_file_get(open_file_table, fd, &mode, &inumber) == -1) return TECNICOFS_ERROR_FILE_NOT_FOUND;  //ERRO FICHEIRO NAO VALIDO
-	
 	if(mode != 1 && mode != 3) return TECNICOFS_ERROR_INVALID_MODE; //ERRO FICHEIRO NAO ESTA ABERTO NO MODO CERTO
 	
 	if(inode_set(inumber, buffer, len) == -1) return TECNICOFS_ERROR_OTHER; //erro qualquer

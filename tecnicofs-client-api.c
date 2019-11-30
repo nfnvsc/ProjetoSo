@@ -40,7 +40,6 @@ int tfsUnmount(){
 
 int sendMessage(){
     int n;
-    //char recvline[MAXLINE+1];
 
     /* Envia string para sockfd.
     Note-se que o \0 não é enviado */
@@ -54,7 +53,10 @@ int sendMessage(){
     n = read(sockfd, recvline, MAXLINE);
 
     if (n<0) perror("str_cli:readline error");
-        recvline[n] = '\0';
+
+    //printf("RECEIVED: %s\n", recvline);
+
+    recvline[n] = '\0';
 
     return atoi(recvline);
 }
@@ -89,12 +91,8 @@ int tfsRead(int fd, char *buffer, int len){
     int output;
     sprintf(sendline, "l %d %d",fd, len);
 
-    printf("READ_INTPUT: %s\n", sendline);
-
     output = sendMessage();
 
-    printf("READ_OUTPUT: %d\n", output);
-   
     strncpy(buffer, recvline + 2, strlen(recvline)-1);
 
     return output;
@@ -105,7 +103,7 @@ int tfsWrite(int fd, char *buffer, int len){
     return sendMessage();
 }
 
-#define NDEBUG
+//#define NDEBUG
 
 //TESTE
 int main(int argc, char** argv){
@@ -113,29 +111,18 @@ int main(int argc, char** argv){
         printf("Usage: %s sock_path\n", argv[0]);
         exit(0);
     }
-    /*
-    char buffer[100];
-    char *teste = "BLA BLA BLAxx";
-    tfsMount(argv[1]);
-    tfsCreate("TESTE", 3, 3);
-    int fd = tfsOpen("TESTE", 3);
-    tfsWrite(fd, teste, strlen(teste));
-    tfsRead(fd, buffer, strlen(teste));
-    printf("%s", buffer);
 
-    return 0;
-    */
     char readBuffer[10] = {0};
     assert(tfsMount(argv[1]) == 0);
     assert(tfsCreate("abc", RW, READ) == 0);
     int fd = -1;
     assert((fd = tfsOpen("abc", RW)) == 0);
-    assert(tfsWrite(fd, "12", 2) == 0);
+    assert(tfsWrite(fd, "12345", 5) == 0);
     
-    printf("Test: read full file content");
+    printf("Test: read full file content\n");
     assert(tfsRead(fd, readBuffer, 6) == 5);
     printf("Content read: %s\n", readBuffer);
-    /*
+    
     printf("Test: read only first 3 characters of file content");
     memset(readBuffer, 0, 10*sizeof(char));
     assert(tfsRead(fd, readBuffer, 4) == 3);
@@ -158,17 +145,6 @@ int main(int argc, char** argv){
 
     assert(tfsDelete("abc") == 0);
     assert(tfsUnmount() == 0);
-    */
-    /*
-    int fd;
-    char *buffer;
-    tfsMount(argv[1]);
-    tfsCreate("F1", 1, 2);
-    fd = tfsOpen("F1", 1);
-    tfsWrite(fd, "cagalhao", 5);
-    tfsRead(fd, buffer, 5);
-    printf("GGG WWP: %s", buffer);
-    tfsUnmount();
-    */
+    
 }
 //TESTE
