@@ -109,6 +109,8 @@ void thread_fs_unlock(tecnicofs_node* fs_node){
 void free_tecnicofs(tecnicofs* fs){
 	int i;
 	tecnicofs_node* fs_node;
+
+	inode_table_destroy();
 	for(i = 0; i<fs->numberBuckets; i++){
 		fs_node = fs->fs_nodes[i];
 		destroy_lock(fs_node);
