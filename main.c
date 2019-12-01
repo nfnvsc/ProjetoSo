@@ -136,7 +136,6 @@ void applyCommands(char *line, int user, open_file* file_table, char* buffer){
             }
             break;
         case 'w':
-            //printf("ARG2: %s %ld\n", arg2, strlen(arg2));
             return_val = writeFileContents(fs, file_table, atoi(arg1), arg2, strlen(arg2));   //arg1 = filenameOld, arg2 = filenameNew
             sprintf(buffer, "%d", return_val);
             break;

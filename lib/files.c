@@ -58,9 +58,7 @@ int open_file_open(open_file* open_file_table, int inumber, int mode){
 }
 
 int open_file_close(open_file* open_file_table, int fd){
-    printf("fd?\n");
     if(fd < 0 || fd > MAX_OPEN_FILES) return -1; //FD NOT VALID
-    printf("openn?\n");
     if(open_file_table[fd].inumber == -1) return -1; //FILE IS NOT OPENED
 
     open_file_table[fd].inumber = -1;

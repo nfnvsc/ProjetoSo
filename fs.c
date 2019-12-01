@@ -212,7 +212,6 @@ int renameFile(tecnicofs *fs, char* name, char* new_name, uid_t user){
 		if (user != owner) return TECNICOFS_ERROR_PERMISSION_DENIED; //ERRO FICHEIRO NAO PERTENCE AO USER
 
 		if (search(node_newName->bstRoot, new_name) == NULL){
-			printf("renaming\n");
 			node_name->bstRoot = remove_item(node_name->bstRoot, name);
 			node_newName->bstRoot = insert(node_newName->bstRoot, new_name, inumber);
 		}
@@ -258,20 +257,22 @@ int openFile(tecnicofs *fs,open_file* open_file_table ,char* filename, int mode,
 }
 
 int closeFile(open_file* open_file_table, int fd){
-	printf("closing\n");
 	if (open_file_close(open_file_table, fd) == -1) return TECNICOFS_ERROR_FILE_NOT_OPEN;
 	return 0;
 }
 
 int readFile(tecnicofs *fs,open_file* open_file_table ,int fd, char* buffer, int len){
 	int mode, inumber, read_len;
-	if(open_file_get(open_file_table, fd, &mode, &inumber) == -1) return TECNICOFS_ERROR_FILE_NOT_FOUND;
-
-	if(mode != 2 && mode != 3) return TECNICOFS_ERROR_FILE_NOT_OPEN; 
-	
-	if((read_len = inode_get(inumber, NULL, NULL, NULL, buffer, len)) == -1) return TECNICOFS_ERROR_OTHER; 
+	if(open_file_get(open_file_table, fd, &mode, &inumber) == -1) return TECNICOFS_ERROR_OTHER;
+	if(mode == 0) return TECNICOFS_ERROR_FILE_NOT_OPEN;
+	if(mode != 2 && mode != 3) {
+		//INCERTO SOBRE ESTE BLOCO DE CODIGO
+		open_file_close(open_file_table,fd);
+		return TECNICOFS_ERROR_INVALID_MODE; 
+	}
+	read_len = inode_get(inumber, NULL, NULL, NULL, buffer, len - 1);
+	if(read_len == -1) return TECNICOFS_ERROR_OTHER; 
 	return read_len;
-	
 }
 
 int writeFileContents(tecnicofs *fs,open_file* open_file_table, int fd, char* buffer, int len){
