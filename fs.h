@@ -36,6 +36,7 @@ void init_lock(tecnicofs_node* fs_node);
 void destroy_lock(tecnicofs_node* fs_node);
 
 open_file* init_open_file_table();
+void destroy_open_file_table(open_file* op);
 
 int openFile(tecnicofs *fs,open_file* open_file_table ,char* filename, int mode, uid_t user);
 int closeFile(open_file* open_file_table, int fd);

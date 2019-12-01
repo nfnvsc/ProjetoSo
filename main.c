@@ -6,7 +6,6 @@
 #include <signal.h>
 #include <pthread.h>
 #include <unistd.h>
-#include <semaphore.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -17,57 +16,16 @@
 #define MAX_INPUT_SIZE 128
 #define MAX_CLIENTS 5
 
-int numberThreads = 0;
 int numberBuckets = 0;
 tecnicofs* fs;
     
-char inputCommands[MAX_COMMANDS][MAX_INPUT_SIZE];
-int prodptr = 0;
-int consptr = 0;
 int sockfd;
-
-pthread_mutex_t lock_p, lock_c;
-sem_t producer;
-sem_t consumer;
 
 int END = 0;
 
 int sockfd, servlen;
 struct sockaddr_un serv_addr;
 
-void mutex_lock(pthread_mutex_t *lock){
-    #if defined (MUTEX) || defined (RWLOCK)
-    if (pthread_mutex_lock(lock)){
-     perror("Failed to lock mutex\n");
-    }
-    #endif
-}
-
-void mutex_unlock(pthread_mutex_t *lock){
-    #if defined (MUTEX) || defined (RWLOCK)
-    if (pthread_mutex_unlock(lock)){ 
-    	perror("Failed to unlock mutex\n");
-    }
-    #endif
-}
-
-void mutex_destroy_sem(){
-    #if defined (RWLOCK) || defined (MUTEX)
-        if (pthread_mutex_destroy(&lock_c) != 0){
-            perror("mutex_destroy failed\n");  
-        }
-        if (pthread_mutex_destroy(&lock_p) != 0){
-        	perror("mutex_destroy failed\n");	
-        }
-    #endif
-    if (sem_destroy(&producer) != 0){
-    	perror("mutex destroy failed\n");
-    	
-    }
-    if (sem_destroy(&consumer) != 0){
-    	perror("mutex destroy failed\n"); 	
-    }
-}
 
 static void displayUsage (const char* appName){
     printf("Usage: %s socketname outputfile numbuckets\n", appName);
@@ -83,26 +41,13 @@ static void parseArgs (long argc, char* const argv[]){
     numberBuckets = atoi(argv[3]);
 }       
 
-int insertCommand(char* data) {
-	sem_wait(&producer);
-	mutex_lock(&lock_p);
-    strcpy(inputCommands[(prodptr++) % MAX_COMMANDS], data);
-    mutex_unlock(&lock_p);
-    sem_post(&consumer);    
-    return 1;
-}
-
-void errorParse(){
-    fprintf(stderr, "Error: command invalid\n");    
-}
-
 void applyCommands(char *line, int user, open_file* file_table, char* buffer){ 	
     char token, arg1[MAX_INPUT_SIZE], arg2[MAX_INPUT_SIZE];
     char aux[MAX_INPUT_SIZE];
     int permissions, return_val;
 
     sscanf(line, "%c %s %[^\t\n]", &token, arg1, arg2);
-    //printf("BUFFER AC_IN: %s\n", buffer);
+
     switch (token)   {
         case 'c':
             permissions = atoi(arg2); /*permissions = (int) ab
@@ -147,7 +92,6 @@ void applyCommands(char *line, int user, open_file* file_table, char* buffer){
             exit(EXIT_FAILURE);      
         }
     }	
-    //printf("BUFFER AC_OUT: %s\n", buffer);
 
 }
 
@@ -163,31 +107,21 @@ void write_output_file(char* fileName){
     fclose(outputFile);
 }
 
-void init_mutex_sem(){
-    #if defined (MUTEX) || defined (RWLOCK)
-    if (pthread_mutex_init(&lock_c, NULL) != 0)
-    {
-        perror("Mutex init failed\n");   
-    }
-    #endif
-    if (pthread_mutex_init(&lock_p, NULL) != 0){
-        perror("Mutex init failed\n");
-        
-    }
-    if (sem_init(&producer, 0, MAX_COMMANDS) != 0){
-        perror("Failed to create semaphore\n");
-        
-    }
-    if (sem_init(&consumer, 0, 0) != 0){
-        perror("Failed to create semaphore\n");   
-    }
-}
 
 void *str_echo(void *sockfd){
     int n;
     socklen_t len;
+    sigset_t set;
     char line[MAX_INPUT_SIZE];
     char buffer[MAX_INPUT_SIZE];
+
+    struct ucred ucred;
+    len = sizeof(struct ucred);
+
+    //Block SIGINT in this thread
+    sigemptyset(&set);
+    sigaddset(&set, SIGINT);
+    pthread_sigmask(SIG_BLOCK, &set, NULL);
 
     open_file* file_table = init_open_file_table();
 
@@ -198,15 +132,11 @@ void *str_echo(void *sockfd){
         else if (n < 0) perror("str_echo: readline error");
         else{
             line[n] = '\0';
-            printf("\nRECEIVED: %s\n", line);
-
-            struct ucred ucred;
-            len = sizeof(struct ucred);
 
             if (getsockopt(*(int*)sockfd, SOL_SOCKET, SO_PEERCRED, &ucred, &len) == -1){
                 perror("str_echo: getUID error");
             }
-            //buffer = 
+
             applyCommands(line, ucred.pid, file_table, buffer);
             n = strlen(buffer);
         }
@@ -215,13 +145,12 @@ void *str_echo(void *sockfd){
         if(write(*(int*)sockfd, &buffer, n) != n)
             perror("str_echo:write error");
     }
+
     close(*(int*)sockfd); 
+    destroy_open_file_table(file_table);
 }
 
 void mountSocket(char* socketName){
-    //int servlen;
-    //struct sockaddr_un serv_addr;
-
     /* Cria socket stream */
     if ((sockfd = socket(AF_UNIX,SOCK_STREAM,0) ) < 0)
         perror("server: can't open stream socket");
@@ -245,8 +174,6 @@ void sig_hand(int sig){
     END = 1;
 }
 
-
-
 void receiveClients(){
     struct sockaddr_un cli_addr;
     int newsockfd, i;
@@ -254,16 +181,12 @@ void receiveClients(){
     pthread_t *clientThreads = malloc(MAX_CLIENTS * sizeof(pthread_t));
 
     struct sigaction act;
-    sigset_t set;
 
-    /* Use the sa_sigaction field because the handles has two additional parameters */
+    /* Funcao que da handle do signal */
 	act.sa_sigaction = (void *)&sig_hand;
  
 	/* The SA_SIGINFO flag tells sigaction() to use the sa_sigaction field, not sa_handler. */
 	act.sa_flags = SA_SIGINFO;
-    
-    sigemptyset(&set);
-    sigaddset(&set, SIGINT);
 
     sigaction(SIGINT, &act, NULL);
 
@@ -274,15 +197,13 @@ void receiveClients(){
 
         if (newsockfd < 0) perror("server: accept error");
         
-        //pthread_sigmask(SIG_BLOCK, &set, NULL);
         if (pthread_create(&clientThreads[i], NULL, str_echo, (void *) &newsockfd) != 0){
             perror("Failed to create thread\n");
         }
-        
     }
-    int err;
-    for(i = 0; i < MAX_CLIENTS; i++){
-        if ((err = pthread_join(clientThreads[i], NULL)) != 0) printf("Failed to join thread: %d\n", err);
+
+    for(int x = 0; x < i; x++){
+        if (pthread_join(clientThreads[x], NULL) != 0) perror("Failed to join thread");
     }
 
     free(clientThreads);
@@ -292,7 +213,6 @@ void receiveClients(){
 int main(int argc, char* argv[]) {
     //TIMER_T beginTime, endTime; 
     parseArgs(argc, argv);
-    init_mutex_sem();
     fs = new_tecnicofs(numberBuckets);
     mountSocket(argv[1]);
     receiveClients();
@@ -304,7 +224,6 @@ int main(int argc, char* argv[]) {
     printf("TecnicoFS completed in %0.4f seconds.\n", TIMER_DIFF_SECONDS(beginTime, endTime));
     */
     write_output_file(argv[2]);
-    mutex_destroy_sem();
     free_tecnicofs(fs);
     exit(EXIT_SUCCESS);
 }

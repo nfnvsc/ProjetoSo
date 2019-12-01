@@ -290,6 +290,10 @@ open_file* init_open_file_table(){
 	return open_file_table_init();
 }
 
+void destroy_open_file_table(open_file* op){
+	open_file_table_destroy(op);
+}
+
 void print_tecnicofs_tree(FILE * fp, tecnicofs *fs){
 	int i;
 	tecnicofs_node* fs_node;
