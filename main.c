@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <signal.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <semaphore.h>
@@ -28,6 +29,8 @@ int sockfd;
 pthread_mutex_t lock_p, lock_c;
 sem_t producer;
 sem_t consumer;
+
+int END = 0;
 
 int sockfd, servlen;
 struct sockaddr_un serv_addr;
@@ -212,6 +215,7 @@ void *str_echo(void *sockfd){
         if(write(*(int*)sockfd, &buffer, n) != n)
             perror("str_echo:write error");
     }
+    close(*(int*)sockfd); 
 }
 
 void mountSocket(char* socketName){
@@ -237,23 +241,52 @@ void mountSocket(char* socketName){
     listen(sockfd, 5);
 }
 
+void sig_hand(int sig){
+    END = 1;
+}
+
+
+
 void receiveClients(){
     struct sockaddr_un cli_addr;
     int newsockfd, i;
     socklen_t clilen;
-    pthread_t *clientThreads = malloc(MAX_INPUT_SIZE * sizeof(pthread_t));
+    pthread_t *clientThreads = malloc(MAX_CLIENTS * sizeof(pthread_t));
+
+    struct sigaction act;
+    sigset_t set;
+
+    /* Use the sa_sigaction field because the handles has two additional parameters */
+	act.sa_sigaction = (void *)&sig_hand;
+ 
+	/* The SA_SIGINFO flag tells sigaction() to use the sa_sigaction field, not sa_handler. */
+	act.sa_flags = SA_SIGINFO;
+    
+    sigemptyset(&set);
+    sigaddset(&set, SIGINT);
+
+    sigaction(SIGINT, &act, NULL);
 
     for (i = 0; i < MAX_CLIENTS; i = (i + 1) % MAX_CLIENTS){
         newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
 
+        if (END) break;
+
         if (newsockfd < 0) perror("server: accept error");
         
+        //pthread_sigmask(SIG_BLOCK, &set, NULL);
         if (pthread_create(&clientThreads[i], NULL, str_echo, (void *) &newsockfd) != 0){
             perror("Failed to create thread\n");
         }
         
-       // close(newsockfd);
     }
+    int err;
+    for(i = 0; i < MAX_CLIENTS; i++){
+        if ((err = pthread_join(clientThreads[i], NULL)) != 0) printf("Failed to join thread: %d\n", err);
+    }
+
+    free(clientThreads);
+
 }
 
 int main(int argc, char* argv[]) {
