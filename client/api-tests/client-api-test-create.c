@@ -14,12 +14,7 @@ int main(int argc, char** argv) {
     printf("Test: create file sucess");
     assert(tfsCreate("a", RW, READ) == 0);
     printf("Test: create file with name that already exists");
-    assert(tfsCreate("b", RW, READ) == 0);
-    assert(tfsCreate("c", RW, READ) == 0);
-    assert(tfsCreate("d", RW, READ) == 0);
-    assert(tfsCreate("e", RW, READ) == 0);
-    assert(tfsCreate("f", RW, READ) == 0);
-    assert(tfsCreate("g", RW, READ) == 0);
+    assert(tfsCreate("a", RW, READ) == TECNICOFS_ERROR_FILE_ALREADY_EXISTS);
     assert(tfsUnmount() == 0);
 
     return 0;
