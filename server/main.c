@@ -81,7 +81,7 @@ int applyCommands(char *line, int user, open_file* file_table, char* buffer){
                 sprintf(buffer, "%d %s", return_val, aux);
             else
                 sprintf(buffer, "%d", return_val);
-            return 0; //write char in the socket
+            return 0; //write CHAR in the socket
             break;
         case 'w':
             return_val = writeFileContents(fs, file_table, atoi(arg1), arg2, strlen(arg2));   //arg1 = filenameOld, arg2 = filenameNew

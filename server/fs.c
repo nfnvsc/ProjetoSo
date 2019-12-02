@@ -236,10 +236,10 @@ int check_perms(uid_t user, int mode, int inumber){
 	inode_get(inumber, &owner, &ownerPerm, &othersPerm, NULL, 1); //get owner
 	
 	if(user==owner){
-		if(ownerPerm != mode && ownerPerm != 3) return -1;
+		if(ownerPerm != mode && ownerPerm != RW) return -1;
 	} 
 	else
-		if(othersPerm != mode && othersPerm != 3) return -1;
+		if(othersPerm != mode && othersPerm != RW) return -1;
 	
 	return 0;
 	
@@ -253,6 +253,7 @@ int openFile(tecnicofs *fs,open_file* open_file_table ,char* filename, int mode,
 	if(check_perms(user, mode, inumber) == -1) return TECNICOFS_ERROR_PERMISSION_DENIED;
 	
 	if((output = open_file_open(open_file_table, inumber, mode)) == -1) return TECNICOFS_ERROR_FILE_IS_OPEN; 
+
 	if(output == -2) return TECNICOFS_ERROR_MAXED_OPEN_FILES;
 	
 	return output;
@@ -265,20 +266,28 @@ int closeFile(open_file* open_file_table, int fd){
 
 int readFile(tecnicofs *fs,open_file* open_file_table ,int fd, char* buffer, int len){
 	int mode, inumber, read_len;
+
 	if(open_file_get(open_file_table, fd, &mode, &inumber) == -1) return TECNICOFS_ERROR_OTHER;
+
 	if(mode == 0) return TECNICOFS_ERROR_FILE_NOT_OPEN;
-	if(mode != 2 && mode != 3) return TECNICOFS_ERROR_INVALID_MODE; 
+
+	if(mode != READ && mode != RW) return TECNICOFS_ERROR_INVALID_MODE; 
+
 	read_len = inode_get(inumber, NULL, NULL, NULL, buffer, len - 1);
+
 	if(read_len == -1) return TECNICOFS_ERROR_OTHER; 
+
 	return read_len;
 }
 
 int writeFileContents(tecnicofs *fs,open_file* open_file_table, int fd, char* buffer, int len){
 	int mode, inumber;
 
-	if(open_file_get(open_file_table, fd, &mode, &inumber) == -1) return TECNICOFS_ERROR_FILE_NOT_FOUND;  //ERRO FICHEIRO NAO VALIDO
-	if(mode != 1 && mode != 3) return TECNICOFS_ERROR_INVALID_MODE; 
-	if(inode_set(inumber, buffer, len) == -1) return TECNICOFS_ERROR_OTHER; //erro qualquer
+	if(open_file_get(open_file_table, fd, &mode, &inumber) == -1) return TECNICOFS_ERROR_FILE_NOT_FOUND;
+
+	if(mode != WRITE && mode != RW) return TECNICOFS_ERROR_INVALID_MODE; 
+
+	if(inode_set(inumber, buffer, len) == -1) return TECNICOFS_ERROR_OTHER;
 
 	return 0;
 }

@@ -52,17 +52,19 @@ void sendMessage(){
 
 int receiveMessageInt(){
     int n; 
-    int *ret = malloc(sizeof(int));
+    int ret = 0;
+
     /* Tenta ler int de sockfd.
     Note-se que tem de terminar a string com \0 */
-    n = read(sockfd, ret, MAXLINE);
+    n = read(sockfd, &ret, MAXLINE);
 
     if (n<0) perror("str_cli:readline error on socket");
-    return *ret;
+    return ret;
 }
 
 int receiveMessageChar(){
-    int n, ret;
+    int n;
+
     /* Tenta ler string de sockfd.
     Note-se que tem de terminar a string com \0 */
     n = read(sockfd, recvline, MAXLINE);
@@ -71,8 +73,7 @@ int receiveMessageChar(){
     
     recvline[n] = '\0';
 
-    ret = atoi(recvline);
-    return ret;
+    return atoi(recvline);
 }
 
 int tfsCreate(char *filename, permission ownerPermissions, permission othersPermissions){
