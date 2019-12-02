@@ -1,7 +1,7 @@
 #ifndef TECNICOFS_CLIENT_API_H
 #define TECNICOFS_CLIENT_API_H
 
-#include "tecnicofs-api-constants.h"
+#include "../server/tecnicofs-api-constants.h"
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>

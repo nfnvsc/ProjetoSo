@@ -1,3 +1,4 @@
+#include "../tecnicofs-api-constants.h"
 #include "inodes.h"
 
 #define MAX_OPEN_FILES 5

@@ -144,7 +144,7 @@ void *str_echo(void *sockfd){
         /*Reenvia a linha para o socket. n conta com o \0 da string,
         caso contrário perdia-se sempre um caracter!*/
         if(write(*(int*)sockfd, &buffer, n) != n)
-            perror("str_echo:write error");
+            perror("str_echo: write error");
     }
 
     close(*(int*)sockfd); 
@@ -166,7 +166,7 @@ void mountSocket(char* socketName){
     servlen = strlen(serv_addr.sun_path) + sizeof(serv_addr.sun_family);
 
     if (bind(sockfd, (struct sockaddr *) &serv_addr, servlen) < 0)
-        perror("server, can't bind local address");
+        perror("server: can't bind local address");
 
     listen(sockfd, 5);
 }
@@ -199,12 +199,12 @@ void receiveClients(){
         if (newsockfd < 0) perror("server: accept error");
         
         if (pthread_create(&clientThreads[i], NULL, str_echo, (void *) &newsockfd) != 0){
-            perror("Failed to create thread\n");
+            perror("receiveClients: failed to create thread\n");
         }
     }
 
     for(int x = 0; x < i; x++){
-        if (pthread_join(clientThreads[x], NULL) != 0) perror("Failed to join thread");
+        if (pthread_join(clientThreads[x], NULL) != 0) perror("receiveClients: failed to join thread");
     }
 
     free(clientThreads);

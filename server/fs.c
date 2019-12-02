@@ -16,7 +16,6 @@ tecnicofs* new_tecnicofs(int numberBuckets){
 
 	for(i = 0; i < numberBuckets; i++){
 		fs->fs_nodes[i] = new_tecnicofs_node();
-		fs->fs_nodes[i] = new_tecnicofs_node();
 	}
 
 	fs->numberBuckets = numberBuckets;

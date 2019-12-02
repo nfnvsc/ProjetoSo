@@ -14,7 +14,7 @@ int tfsMount(char *adress){
 
     /* Cria socket stream */
     if ((sockfd= socket(AF_UNIX, SOCK_STREAM, 0) ) < 0)
-        perror("client: can't open stream socket");
+        return TECNICOFS_ERROR_CONNECTION_ERROR;
 
     /* Primeiro uma limpeza preventiva */
     bzero((char *) &serv_addr, sizeof(serv_addr));
@@ -26,7 +26,7 @@ int tfsMount(char *adress){
     servlen = strlen(serv_addr.sun_path) + sizeof(serv_addr.sun_family);
 
     if(connect(sockfd, (struct sockaddr *) &serv_addr, servlen) < 0)
-        perror("client: can't connect to server");
+        return TECNICOFS_ERROR_CONNECTION_ERROR;
 
     openSession = 1;
     return 0;
