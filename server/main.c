@@ -51,30 +51,28 @@ int applyCommands(char *line, int user, open_file* file_table, char* buffer){
 
     switch (token)   {
         case 'c':
-            permissions = atoi(arg2); /*permissions = (int) ab
-                                                        a = ownerpermissions                                                
-                                                        b = othersPermissions*/
-            return_val = create(fs, arg1, user, permissions / 10, permissions % 10); //arg1 = filename
+            permissions = atoi(arg2);
+            return_val = create(fs, arg1, user, permissions / 10, permissions % 10);
             sprintf(buffer, "%d", return_val);
             break;
         case 'd':
-            return_val = delete(fs, file_table, arg1, user); //arg1 = filename
+            return_val = delete(fs, file_table, arg1, user); 
             sprintf(buffer, "%d", return_val);
             break;
         case 'r':
-            return_val = renameFile(fs, arg1, arg2, user);   //arg1 = filenameOld, arg2 = filenameNew
+            return_val = renameFile(fs, arg1, arg2, user); 
             sprintf(buffer, "%d", return_val);
             break;
         case 'o':
-            return_val = openFile(fs, file_table, arg1, atoi(arg2), user);   //arg1 = filenameOld, arg2 = filenameNew
+            return_val = openFile(fs, file_table, arg1, atoi(arg2), user);  
             sprintf(buffer, "%d", return_val);
             break;
         case 'x':
-            return_val = closeFile(file_table, atoi(arg1));   //arg1 = filenameOld, arg2 = filenameNew
+            return_val = closeFile(file_table, atoi(arg1));   
             sprintf(buffer, "%d", return_val);
             break;
         case 'l':
-            return_val = readFile(fs, file_table, atoi(arg1), aux, atoi(arg2));   //arg1 = filenameOld, arg2 = filenameNew
+            return_val = readFile(fs, file_table, atoi(arg1), aux, atoi(arg2));   
             
             //if succesful
             if (return_val > 0)
@@ -84,7 +82,7 @@ int applyCommands(char *line, int user, open_file* file_table, char* buffer){
             return 0; //write CHAR in the socket
             break;
         case 'w':
-            return_val = writeFileContents(fs, file_table, atoi(arg1), arg2, strlen(arg2));   //arg1 = filenameOld, arg2 = filenameNew
+            return_val = writeFileContents(fs, file_table, atoi(arg1), arg2, strlen(arg2));
             sprintf(buffer, "%d", return_val);
             break;
         default: { /* error */
@@ -148,8 +146,6 @@ void *str_echo(void *sockfd){
         }
         else{
             n = strlen(buffer);
-        /*Reenvia a linha para o socket. n conta com o \0 da string,
-        caso contrário perdia-se sempre um caracter!*/
             if(write(*(int*)sockfd, &buffer, n) != n)
                 perror("str_echo: write error");
         }
