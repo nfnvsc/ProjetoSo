@@ -143,7 +143,7 @@ int create(tecnicofs* fs, char *name, uid_t user, permission ownerPerm, permissi
 }
 
 int delete(tecnicofs* fs, open_file *open_file_table, char *name, uid_t user){
-	int inumber;
+	int inumber, fd;
 	uid_t owner = 1;
 
 	if ((inumber = lookup(fs, name)) == -1) return TECNICOFS_ERROR_FILE_NOT_FOUND; //ERRO NAO EXISTE FICHEIRO
@@ -151,9 +151,11 @@ int delete(tecnicofs* fs, open_file *open_file_table, char *name, uid_t user){
 	inode_get(inumber, &owner, NULL, NULL, NULL, 1); //get owner
 
 	if(owner != user) return TECNICOFS_ERROR_PERMISSION_DENIED; //ERRO FICHEIRO NAO PERTENCE AO USER
-	if(open_file_lookup(open_file_table, inumber)) return TECNICOFS_ERROR_FILE_IS_OPEN;
+	
+	fd = open_file_lookup(open_file_table, inumber);
+	open_file_close(open_file_table, fd);
+	
 	inode_delete(inumber);
-
 	tecnicofs_node* fs_node = get_node(fs, name);
 
 	thread_fs_lock(fs_node, 1);
@@ -161,7 +163,6 @@ int delete(tecnicofs* fs, open_file *open_file_table, char *name, uid_t user){
 	thread_fs_unlock(fs_node);
 
 	return 0;
-
 }
 
 int lookup(tecnicofs* fs, char *name){
@@ -267,11 +268,7 @@ int readFile(tecnicofs *fs,open_file* open_file_table ,int fd, char* buffer, int
 	int mode, inumber, read_len;
 	if(open_file_get(open_file_table, fd, &mode, &inumber) == -1) return TECNICOFS_ERROR_OTHER;
 	if(mode == 0) return TECNICOFS_ERROR_FILE_NOT_OPEN;
-	if(mode != 2 && mode != 3) {
-		//INCERTO SOBRE ESTE BLOCO DE CODIGO
-		open_file_close(open_file_table,fd);
-		return TECNICOFS_ERROR_INVALID_MODE; 
-	}
+	if(mode != 2 && mode != 3) return TECNICOFS_ERROR_INVALID_MODE; 
 	read_len = inode_get(inumber, NULL, NULL, NULL, buffer, len - 1);
 	if(read_len == -1) return TECNICOFS_ERROR_OTHER; 
 	return read_len;
@@ -281,8 +278,7 @@ int writeFileContents(tecnicofs *fs,open_file* open_file_table, int fd, char* bu
 	int mode, inumber;
 
 	if(open_file_get(open_file_table, fd, &mode, &inumber) == -1) return TECNICOFS_ERROR_FILE_NOT_FOUND;  //ERRO FICHEIRO NAO VALIDO
-	if(mode != 1 && mode != 3) return TECNICOFS_ERROR_INVALID_MODE; //ERRO FICHEIRO NAO ESTA ABERTO NO MODO CERTO
-	
+	if(mode != 1 && mode != 3) return TECNICOFS_ERROR_INVALID_MODE; 
 	if(inode_set(inumber, buffer, len) == -1) return TECNICOFS_ERROR_OTHER; //erro qualquer
 
 	return 0;

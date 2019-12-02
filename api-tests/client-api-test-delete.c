@@ -16,12 +16,12 @@ int main(int argc, char** argv) {
     assert((fd = tfsOpen("a", RW)) == 0);
 
     printf("Test: delete open file");
-    assert(tfsDelete("a") == TECNICOFS_ERROR_FILE_IS_OPEN);
+    assert(tfsDelete("a") == 0);
 
     assert((fd = tfsClose(0)) == 0);
 
     printf("Test: delete file success");
-    assert(tfsDelete("a") == 0);
+    assert(tfsDelete("a") == TECNICOFS_ERROR_FILE_NOT_FOUND);
     
     printf("Test: delete file that does not exist");
     assert(tfsDelete("b") == TECNICOFS_ERROR_FILE_NOT_FOUND);

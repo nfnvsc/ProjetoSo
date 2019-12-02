@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include "lib/timer.h"
 #include "fs.h"
 
 #define MAX_COMMANDS 10
@@ -211,18 +212,16 @@ void receiveClients(){
 }
 
 int main(int argc, char* argv[]) {
-    //TIMER_T beginTime, endTime; 
+    TIMER_T beginTime, endTime; 
     parseArgs(argc, argv);
     fs = new_tecnicofs(numberBuckets);
     mountSocket(argv[1]);
-    receiveClients();
 
-    /*
-    TIMER_READ(beginTime); start clock
-    excecuteThreads(argv[1]);
-    TIMER_READ(endTime); start clock
+    TIMER_READ(beginTime);
+    receiveClients();
+    TIMER_READ(endTime);
     printf("TecnicoFS completed in %0.4f seconds.\n", TIMER_DIFF_SECONDS(beginTime, endTime));
-    */
+    
     write_output_file(argv[2]);
     free_tecnicofs(fs);
     exit(EXIT_SUCCESS);
