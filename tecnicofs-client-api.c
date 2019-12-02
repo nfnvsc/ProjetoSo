@@ -31,7 +31,6 @@ int tfsMount(char *adress){
     openSession = 1;
     return 0;
     /* Envia as linhas lidas do teclado para o socket */
-    //str_cli(stdin, sockfd);
 }
 
 int tfsUnmount(){
